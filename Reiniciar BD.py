@@ -17,4 +17,4 @@ cursor.execute("UPDATE tabMesa SET Evaluador = NULL")
 cursor.execute("UPDATE tabMesa SET Foro = NULL")
 cursor.execute("UPDATE tabMesa SET Año = ' ' ")
 
-conn.commit()
+conn.commit() 

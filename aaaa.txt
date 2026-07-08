@@ -1,0 +1,1 @@
+SELECT tabDelegados.idDelegado, tabDelegados.nomDelegado, tabObservaciones.descObs, tabObservaciones.puntajeObs FROM tabDelegados INNER JOIN tabPuntaje ON tabDelegados.idDelegado = tabPuntaje.idDelegado INNER JOIN tabObservaciones on tabObservaciones.idObs = tabPuntaje.idObs ORDER BY tabDelegados.idDelegado

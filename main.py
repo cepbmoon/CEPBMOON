@@ -1,98 +1,91 @@
-import sqlite3
-import fastapi
+import servidor as s
 from PyQt5.QtWidgets  import *
 from PyQt5.uic import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import sys
 
-class NombrarMesa(QDialog):
-    def __init__(self, msj):
-        super().__init__()
-        loadUi("dialog.ui", self)
-        self.setWindowFlags(Qt.WindowStaysOnTopHint)
-        if msj == 1:
-            self.msjBienvenida.setMaximumHeight(0)
-        self.conn = sqlite3.connect("db_CEPBMOON.db")
-        self.conn.row_factory = sqlite3.Row
-        self.cursor = self.conn.cursor()
+# class NombrarMesa(QDialog):
+#     def __init__(self, msj):
+#         super().__init__()
+#         loadUi("dialog.ui", self)
+#         self.setWindowFlags(Qt.WindowStaysOnTopHint)
+#         if msj == 1:
+#             self.msjBienvenida.setMaximumHeight(0)
 
-        self.btnGuardar.clicked.connect(self.GuardarNombres)
-        self.Nombres()
+#         self.btnGuardar.clicked.connect(self.GuardarNombres)
+#         self.Nombres()
 
-    def Nombres(self):
-        self.cursor.execute("SELECT * FROM tabMesa")
-        mesa = self.cursor.fetchone()
+#     def Nombres(self):
+#         self.cursor.execute("SELECT * FROM tabMesa")
+#         mesa = self.cursor.fetchone()
 
-        self.nomPresidente.setText(mesa["Presidente"] or "")
-        self.nomModerador.setText(mesa["Moderador"] or "")
-        self.nomSecretario.setText(mesa["Secretario"] or "")
-        self.nomEvaluador.setText(mesa["Evaluador"] or "")
-        self.nomForo.setText(mesa["Foro"] or "")
-        self.ano.setText(str(mesa["Año"]) or "")
+#         self.nomPresidente.setText(mesa["Presidente"] or "")
+#         self.nomModerador.setText(mesa["Moderador"] or "")
+#         self.nomSecretario.setText(mesa["Secretario"] or "")
+#         self.nomEvaluador.setText(mesa["Evaluador"] or "")
+#         self.nomForo.setText(mesa["Foro"] or "")
+#         self.ano.setText(str(mesa["Año"]) or "")
 
-    def GuardarNombres(self):
-        presidente = self.nomPresidente.text() or None
-        moderador = self.nomModerador.text() or None
-        secretario = self.nomSecretario.text() or None
-        evaluador = self.nomEvaluador.text() or None
-        foro = self.nomForo.text().upper() or None
-        ano = self.ano.text() or None
-        self.cursor.execute(f"UPDATE tabMesa SET Presidente= ?, Moderador= ?, Secretario= ?, Evaluador= ?, Foro = ?, Año = ?;", (presidente, moderador, secretario, evaluador, foro, ano))
-        self.conn.commit()
-        self.close()
+#     def GuardarNombres(self):
+#         presidente = self.nomPresidente.text() or None
+#         moderador = self.nomModerador.text() or None
+#         secretario = self.nomSecretario.text() or None
+#         evaluador = self.nomEvaluador.text() or None
+#         foro = self.nomForo.text().upper() or None
+#         ano = self.ano.text() or None
+#         self.cursor.execute(f"UPDATE tabMesa SET Presidente= ?, Moderador= ?, Secretario= ?, Evaluador= ?, Foro = ?, Año = ?;", (presidente, moderador, secretario, evaluador, foro, ano))
+#         self.conn.commit()
+#         self.close()
 
-    def closeEvent(self, a0):
-        if self.nomForo.text():
-            super().closeEvent(a0)
-        else:
-            a0.ignore()
+#     def closeEvent(self, a0):
+#         if self.nomForo.text():
+#             super().closeEvent(a0)
+#         else:
+#             a0.ignore()
 
-class HistorialObservaciones(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        loadUi("historialObs.ui", self)
+# class HistorialObservaciones(QMainWindow):
+#     def __init__(self):
+#         super().__init__()
+#         loadUi("historialObs.ui", self)
 
-        self.conn = sqlite3.connect("db_CEPBMOON.db")
-        self.conn.row_factory = sqlite3.Row
-        self.cursor = self.conn.cursor()
+#         self.conn = sqlite3.connect("db_CEPBMOON.db")
+#         self.conn.row_factory = sqlite3.Row
+#         self.cursor = self.conn.cursor()
 
-        self.tabHistorial.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.tabHistorial.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.tabHistorial.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+#         self.tabHistorial.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+#         self.tabHistorial.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+#         self.tabHistorial.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
 
-        self.cursor.execute("""SELECT tabDelegaciones.nomDelegacion, tabDelegados.nomDelegado, tabPuntaje.descObs, tabPuntaje.puntaje FROM tabPuntaje
-                                INNER JOIN tabDelegaciones 
-                                ON tabDelegaciones.idDelegacion = tabDelegados.idDelegacion
-                                INNER JOIN tabDelegados
-                                ON tabDelegados.idDelegado = tabPuntaje.idDelegado ORDER BY nomDelegacion DESC""")
-        self.conn.commit()
-        observaciones = self.cursor.fetchall()
-        for observacion in observaciones:
-            self.tabHistorial.insertRow(0)
-            self.tabHistorial.setItem(0, 0, QTableWidgetItem(observacion["nomDelegacion"]))
-            self.tabHistorial.setItem(0, 1, QTableWidgetItem(observacion["nomDelegado"]))
-            self.tabHistorial.setItem(0, 2, QTableWidgetItem(observacion["descObs"]))
-            self.tabHistorial.setItem(0, 3, QTableWidgetItem(str(observacion["puntaje"])))
+#         self.cursor.execute("""SELECT tabDelegaciones.nomDelegacion, tabDelegados.nomDelegado, tabPuntaje.descObs, tabPuntaje.puntaje FROM tabPuntaje
+#                                 INNER JOIN tabDelegaciones 
+#                                 ON tabDelegaciones.idDelegacion = tabDelegados.idDelegacion
+#                                 INNER JOIN tabDelegados
+#                                 ON tabDelegados.idDelegado = tabPuntaje.idDelegado ORDER BY nomDelegacion DESC""")
+#         self.conn.commit()
+#         observaciones = self.cursor.fetchall()
+#         for observacion in observaciones:
+#             self.tabHistorial.insertRow(0)
+#             self.tabHistorial.setItem(0, 0, QTableWidgetItem(observacion["nomDelegacion"]))
+#             self.tabHistorial.setItem(0, 1, QTableWidgetItem(observacion["nomDelegado"]))
+#             self.tabHistorial.setItem(0, 2, QTableWidgetItem(observacion["descObs"]))
+#             self.tabHistorial.setItem(0, 3, QTableWidgetItem(str(observacion["puntaje"])))
 
 class CEPBMOON(QMainWindow):
     def __init__(self):
         super().__init__()
         loadUi("main.ui", self)
-
-        self.conn = sqlite3.connect("db_CEPBMOON.db")
-        self.conn.row_factory = sqlite3.Row
-        self.cursor = self.conn.cursor()
-
+        self.cursor = s.cursor
+        self.conn = s.conn
         self.ConectarFunciones()                        # Se llaman todas la funciones
         self.Buscador()                                 
 
-        self.NombrarMesaAlAbrir()                       
-        self.PaisesEnForo()                             
-        self.DelegacionesEnForo(self.Delegados)
-        self.Configuraciones()
-        self.Cronometro()
-        self.Observaciones()
+        # self.NombrarMesaAlAbrir()                       
+        # self.PaisesEnForo()                             
+        # self.DelegacionesEnForo(self.Delegados)
+        # self.Configuraciones()
+        # self.Cronometro()
+        # self.Observaciones()
 
     def ConectarFunciones(self):    # Conecta los botones principales con sus funciones
         self.btn1.clicked.connect(lambda _, c=self.Configuraciones_2: self.Expandir(c))
@@ -110,7 +103,7 @@ class CEPBMOON(QMainWindow):
         self.listaHistorial.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)      
 
     def Buscador(self):              # Actualizar el buscador cuando se cambia los paises en un foro
-        self.cursor.execute("SELECT nomDelegacion FROM tabDelegaciones WHERE enforo = 2")
+        self.cursor.execute("SELECT nomDelegacion FROM tabDelegaciones")
         self.delegaciones = [fila["nomDelegacion"] for fila in self.cursor.fetchall()]
         self.completer = QCompleter(self.delegaciones)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
@@ -139,17 +132,19 @@ class CEPBMOON(QMainWindow):
                 self.txtBuscador.clear()
                 return
         
-        last_index = self.scrollLayout.count() - 1                      # Se quita el stretch antes de añadir otra delegación a la fila.
-        if last_index >= 0:                                             # (Cuando se añade una delegacion a la fila, se pone un stretch.)
-            item = self.scrollLayout.itemAt(last_index)
-            if item.spacerItem():
-                self.scrollLayout.takeAt(last_index)
-
-        btn = QPushButton(delegacion)
-        btn.setMinimumSize(100, 100)
-        btn.setMaximumSize(100, 100)
-        btn.setStyleSheet('font: 10pt "Bahnschrift SemiBold"; text-align: left; background-color: rgb(255, 255, 255); border-radius: 20px; padding-left: 20px; margin-bottom: 3px;')
-        btn.clicked.connect(lambda _, b=btn: self.QuitarPais(b))
+        self.LimpiarLayout(self.scrollLayout)
+        self.cursor.execute("INSERT INTO tabFila (idDelegacion) VALUES (%s);", (1,))
+        self.conn.commit()
+        self.cursor.execute("""SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones
+                                INNER JOIN tabFila
+                                ON tabDelegaciones.idDelegacion = tabFila.idDelegacion""")
+        fila = s.cursor.fetchall()
+        for delegacion in fila:
+            btn = QPushButton(delegacion["nomDelegacion"])
+            btn.setMinimumSize(100, 100)
+            btn.setMaximumSize(100, 100)
+            btn.setStyleSheet('font: 10pt "Bahnschrift SemiBold"; text-align: left; background-color: rgb(255, 255, 255); border-radius: 20px; padding-left: 20px; margin-bottom: 3px;')
+            # btn.clicked.connect(lambda _, b=btn: self.QuitarPais(b))
 
         self.txtBuscador.clear()
         self.scrollLayout.addWidget(btn, alignment=Qt.AlignTop)
@@ -401,6 +396,6 @@ class CEPBMOON(QMainWindow):
         self.conn.close()
 
 app= QApplication(sys.argv)
-ventana= NombrarMesa(0)
+ventana= CEPBMOON()
 ventana.show()
 sys.exit(app.exec_()) 

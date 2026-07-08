@@ -1,4 +1,5 @@
 import sqlite3
+import fastapi
 from PyQt5.QtWidgets  import *
 from PyQt5.uic import *
 from PyQt5.QtCore import *
@@ -35,11 +36,17 @@ class NombrarMesa(QDialog):
         moderador = self.nomModerador.text() or None
         secretario = self.nomSecretario.text() or None
         evaluador = self.nomEvaluador.text() or None
-        foro = self.nomForo.text() or None
+        foro = self.nomForo.text().upper() or None
         ano = self.ano.text() or None
         self.cursor.execute(f"UPDATE tabMesa SET Presidente= ?, Moderador= ?, Secretario= ?, Evaluador= ?, Foro = ?, Año = ?;", (presidente, moderador, secretario, evaluador, foro, ano))
         self.conn.commit()
         self.close()
+
+    def closeEvent(self, a0):
+        if self.nomForo.text():
+            super().closeEvent(a0)
+        else:
+            a0.ignore()
 
 class HistorialObservaciones(QMainWindow):
     def __init__(self):
@@ -108,6 +115,7 @@ class CEPBMOON(QMainWindow):
         self.completer = QCompleter(self.delegaciones)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.txtBuscador.setCompleter(self.completer)
+        self.txtDelegacion.setCompleter(self.completer)
  
         self.txtBuscador.returnPressed.connect(self.Buscar)
         self.btnBuscar.clicked.connect(self.Buscar)
@@ -393,6 +401,6 @@ class CEPBMOON(QMainWindow):
         self.conn.close()
 
 app= QApplication(sys.argv)
-ventana= CEPBMOON()
+ventana= NombrarMesa(0)
 ventana.show()
 sys.exit(app.exec_()) 

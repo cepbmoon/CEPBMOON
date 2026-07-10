@@ -1,8 +1,9 @@
-import servidor as s
+#import servidor as s
 from PyQt5.QtWidgets  import *
 from PyQt5.uic import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+import requests
 import sys
 
 # class NombrarMesa(QDialog):
@@ -73,10 +74,9 @@ import sys
 
 class CEPBMOON(QMainWindow):
     def __init__(self):
+        self.SERVIDOR = "http://127.0.0.1:5000"
         super().__init__()
         loadUi("main.ui", self)
-        self.cursor = s.cursor
-        self.conn = s.conn
         self.ConectarFunciones()                        # Se llaman todas la funciones
         self.Buscador()                                 
 
@@ -103,8 +103,8 @@ class CEPBMOON(QMainWindow):
         self.listaHistorial.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)      
 
     def Buscador(self):              # Actualizar el buscador cuando se cambia los paises en un foro
-        self.cursor.execute("SELECT nomDelegacion FROM tabDelegaciones")
-        self.delegaciones = [fila["nomDelegacion"] for fila in self.cursor.fetchall()]
+        delegaciones = requests.get(self.SERVIDOR + "/GETdelegaciones").json()
+        self.delegaciones = [fila["nomDelegacion"] for fila in delegaciones]
         self.completer = QCompleter(self.delegaciones)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.txtBuscador.setCompleter(self.completer)
@@ -131,23 +131,21 @@ class CEPBMOON(QMainWindow):
             if isinstance(widget, QPushButton) and widget.text() == delegacion:
                 self.txtBuscador.clear()
                 return
-        
+        requests.post(self.SERVIDOR + "/POSTfila_delegaciones", json={"delegacion": delegacion})
+        self.CrearFila()
+
+    def CrearFila(self):
+        fila = requests.get(self.SERVIDOR + "/GETfila_delegaciones").json()
         self.LimpiarLayout(self.scrollLayout)
-        self.cursor.execute("INSERT INTO tabFila (idDelegacion) VALUES (%s);", (1,))
-        self.conn.commit()
-        self.cursor.execute("""SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones
-                                INNER JOIN tabFila
-                                ON tabDelegaciones.idDelegacion = tabFila.idDelegacion""")
-        fila = s.cursor.fetchall()
+        # fila = fila.reverse()
+        self.txtBuscador.clear()
         for delegacion in fila:
             btn = QPushButton(delegacion["nomDelegacion"])
             btn.setMinimumSize(100, 100)
             btn.setMaximumSize(100, 100)
             btn.setStyleSheet('font: 10pt "Bahnschrift SemiBold"; text-align: left; background-color: rgb(255, 255, 255); border-radius: 20px; padding-left: 20px; margin-bottom: 3px;')
             # btn.clicked.connect(lambda _, b=btn: self.QuitarPais(b))
-
-        self.txtBuscador.clear()
-        self.scrollLayout.addWidget(btn, alignment=Qt.AlignTop)
+            self.scrollLayout.addWidget(btn, alignment=Qt.AlignTop)
         self.scrollLayout.addStretch()
                 
     def QuitarPais(self, pais):      # Afecta el *Historial*. Quitar un pais de la lista de oradores, registrar y cronometrarlo 
@@ -390,10 +388,10 @@ class CEPBMOON(QMainWindow):
         self.Delegados_3.setMaximumHeight(0)
         nombre.setMaximumHeight(16777215)
     
-    def closeEvent(self, a0):        #Reiniciar los turnos de las delegaciones al cerrar el programa, crear un pdf que registra lo que sucedió en la sesión
-        self.cursor.execute("""UPDATE tabDelegaciones SET turnos = 0""")
-        self.conn.commit()
-        self.conn.close()
+    # def closeEvent(self, a0):        #Reiniciar los turnos de las delegaciones al cerrar el programa, crear un pdf que registra lo que sucedió en la sesión
+    #     self.cursor.execute("""UPDATE tabDelegaciones SET turnos = 0""")
+    #     self.conn.commit()
+    #     self.conn.close()
 
 app= QApplication(sys.argv)
 ventana= CEPBMOON()

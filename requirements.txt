@@ -1,0 +1,6 @@
+PyQt5
+requests
+sys
+flask
+import
+gunicorn

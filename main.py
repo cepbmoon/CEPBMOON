@@ -45,47 +45,46 @@ import sys
 #         else:
 #             a0.ignore()
 
-# class HistorialObservaciones(QMainWindow):
-#     def __init__(self):
-#         super().__init__()
-#         loadUi("historialObs.ui", self)
+class HistorialObservaciones(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.SERVIDOR = "http://127.0.0.1:5000"  #Va a ser el link a render!!
+        loadUi("historialObs.ui", self)
 
-#         self.conn = sqlite3.connect("db_CEPBMOON.db")
-#         self.conn.row_factory = sqlite3.Row
-#         self.cursor = self.conn.cursor()
+        self.tabHistorial.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.tabHistorial.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.tabHistorial.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
 
-#         self.tabHistorial.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-#         self.tabHistorial.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-#         self.tabHistorial.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        observaciones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo":"""SELECT tabDelegaciones.nomDelegacion, tabDelegados.nomDelegado, tabPuntaje.descObs, tabPuntaje.puntaje FROM tabPuntaje
+                                                                                            INNER JOIN tabDelegados ON tabDelegados.idDelegado = tabPuntaje.idDelegado
+                                                                                            INNER JOIN tabDelegaciones ON tabDelegaciones.idDelegacion = tabDelegados.idDelegacion 
+                                                                                            ORDER BY nomDelegacion DESC"""}).json()
+        for observacion in observaciones:
+            self.tabHistorial.insertRow(0)
+            self.tabHistorial.setItem(0, 0, QTableWidgetItem(observacion["nomDelegacion"]))
+            self.tabHistorial.setItem(0, 1, QTableWidgetItem(observacion["nomDelegado"]))
+            self.tabHistorial.setItem(0, 2, QTableWidgetItem(observacion["descObs"]))
+            self.tabHistorial.setItem(0, 3, QTableWidgetItem(str(observacion["puntaje"])))
 
-#         self.cursor.execute("""SELECT tabDelegaciones.nomDelegacion, tabDelegados.nomDelegado, tabPuntaje.descObs, tabPuntaje.puntaje FROM tabPuntaje
-#                                 INNER JOIN tabDelegaciones 
-#                                 ON tabDelegaciones.idDelegacion = tabDelegados.idDelegacion
-#                                 INNER JOIN tabDelegados
-#                                 ON tabDelegados.idDelegado = tabPuntaje.idDelegado ORDER BY nomDelegacion DESC""")
-#         self.conn.commit()
-#         observaciones = self.cursor.fetchall()
-#         for observacion in observaciones:
-#             self.tabHistorial.insertRow(0)
-#             self.tabHistorial.setItem(0, 0, QTableWidgetItem(observacion["nomDelegacion"]))
-#             self.tabHistorial.setItem(0, 1, QTableWidgetItem(observacion["nomDelegado"]))
-#             self.tabHistorial.setItem(0, 2, QTableWidgetItem(observacion["descObs"]))
-#             self.tabHistorial.setItem(0, 3, QTableWidgetItem(str(observacion["puntaje"])))
+##cada sesion tiene que tener también una fila en tabCambios !
 
 class CEPBMOON(QMainWindow):
     def __init__(self):
-        self.SERVIDOR = "http://127.0.0.1:5000"
+        self.SERVIDOR = "http://127.0.0.1:5000"  #Va a ser el link a render!!
         super().__init__()
         loadUi("main.ui", self)
         self.ConectarFunciones()                        # Se llaman todas la funciones
         self.Buscador()                                 
+
+        self.CrearFila()
+        self.CrearHistorial()
 
         # self.NombrarMesaAlAbrir()                       
         # self.PaisesEnForo()                             
         # self.DelegacionesEnForo(self.Delegados)
         # self.Configuraciones()
         # self.Cronometro()
-        # self.Observaciones()
+        self.Observaciones()
 
     def ConectarFunciones(self):    # Conecta los botones principales con sus funciones
         self.btn1.clicked.connect(lambda _, c=self.Configuraciones_2: self.Expandir(c))
@@ -98,12 +97,31 @@ class CEPBMOON(QMainWindow):
         self.scrollAreaWidgetContents.setLayout(self.scrollLayout)
   
         self.cerrarSideBar.clicked.connect(lambda: self.sideBar.setMaximumWidth(0))
-        self.btnLimpiar.clicked.connect(lambda: self.LimpiarLayout(self.scrollLayout))
+        self.btnLimpiar.clicked.connect(self.LimpiarFila)
         self.listaForo.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.listaHistorial.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)      
+        self.listaHistorial.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)   
+
+        self.correrGETs = QTimer(self)
+        self.correrGETs.timeout.connect(self.Gets)
+        self.correrGETs.start(1000)
+
+    def LimpiarFila(self):
+        self.LimpiarLayout(self.scrollLayout)
+        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila"})
+        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 1, fila = 1;"})
+    
+    def Gets(self):
+        cambios = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios"}).json()
+        if cambios[0]["hayCambios"]:
+            if cambios[0]["fila"]:
+                self.CrearFila()
+            if cambios[0]["historial"]:
+                self.CrearHistorial()
+            requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 0, fila = 0, historial = 0;"})
+        self.correrGETs.start(1000)
 
     def Buscador(self):              # Actualizar el buscador cuando se cambia los paises en un foro
-        delegaciones = requests.get(self.SERVIDOR + "/GETdelegaciones").json()
+        delegaciones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT nomDelegacion FROM tabDelegaciones"}).json()
         self.delegaciones = [fila["nomDelegacion"] for fila in delegaciones]
         self.completer = QCompleter(self.delegaciones)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
@@ -118,7 +136,7 @@ class CEPBMOON(QMainWindow):
         mesa = self.cursor.fetchone()
         if None in mesa:
             self.nombrarMesa = NombrarMesa(0)
-            self.nombrarMesa.setModal(True)
+            self.nombrarMesa.setModal(True) 
             self.nombrarMesa.show()
 
     def Buscar(self):                # Para buscar un pais y que se añada a la lista de oradores
@@ -132,32 +150,35 @@ class CEPBMOON(QMainWindow):
                 self.txtBuscador.clear()
                 return
         requests.post(self.SERVIDOR + "/POSTfila_delegaciones", json={"delegacion": delegacion})
-        self.CrearFila()
-
-    def CrearFila(self):
-        fila = requests.get(self.SERVIDOR + "/GETfila_delegaciones").json()
-        self.LimpiarLayout(self.scrollLayout)
-        # fila = fila.reverse()
+        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 1, fila = 1;"})
         self.txtBuscador.clear()
+
+    def CrearFila(self):             # Actualiza la fila de delegaciones en cola
+        codigo = "SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion ORDER BY tabFila.idFila"
+        fila = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": codigo}).json()
+        self.LimpiarLayout(self.scrollLayout)
         for delegacion in fila:
             btn = QPushButton(delegacion["nomDelegacion"])
             btn.setMinimumSize(100, 100)
             btn.setMaximumSize(100, 100)
             btn.setStyleSheet('font: 10pt "Bahnschrift SemiBold"; text-align: left; background-color: rgb(255, 255, 255); border-radius: 20px; padding-left: 20px; margin-bottom: 3px;')
-            # btn.clicked.connect(lambda _, b=btn: self.QuitarPais(b))
+            btn.clicked.connect(lambda _, b=btn: self.QuitarPais(b))
             self.scrollLayout.addWidget(btn, alignment=Qt.AlignTop)
         self.scrollLayout.addStretch()
                 
-    def QuitarPais(self, pais):      # Afecta el *Historial*. Quitar un pais de la lista de oradores, registrar y cronometrarlo 
-        def Registrar(nompais):      # Añade el pais al historial
-                self.cursor.execute("""UPDATE tabDelegaciones SET turnos = turnos + 1 WHERE nomDelegacion = ?""", (nompais,))
-                self.conn.commit()
-                self.cursor.execute("SELECT turnos FROM tabDelegaciones WHERE nomDelegacion = ?",(nompais,))
-                turnos= self.cursor.fetchone()["turnos"]
-
-                self.listaHistorial.insertRow(0)
-                self.listaHistorial.setItem(0, 0, QTableWidgetItem(nompais))
-                self.listaHistorial.setItem(0, 1, QTableWidgetItem(str(turnos)))
+    def QuitarPais(self, delegacion):      # Afecta el *Historial*. Quitar un pais de la lista de oradores, registrar y cronometrarlo 
+        def Registrar(nomDelegacion):      # Añade el pais al historial
+                turnos = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": f"""SELECT tabHistorial.turnos FROM tabHistorial 
+                                                                                              INNER JOIN tabDelegaciones ON tabHistorial.idDelegacion = tabDelegaciones.idDelegacion 
+                                                                                              WHERE tabDelegaciones.nomDelegacion = '{nomDelegacion}';"""}).json()
+                try:
+                    turnos = turnos[0]["turnos"]
+                except:
+                    turnos = 0
+                requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": """INSERT INTO tabHistorial (idDelegacion, turnos)
+                                                                                      SELECT idDelegacion, %s FROM tabDelegaciones 
+                                                                                      WHERE tabDelegaciones.nomDelegacion = %s""", "params":(turnos+1, nomDelegacion,)})
+                requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 1, historial = 1;"})
         def Cronometrar(tiempo):     # Inicia el cronómetro para las delegaciones
             def Cronometro(pais):
                 if self.time == QTime(0, 0, 0):
@@ -189,39 +210,61 @@ class CEPBMOON(QMainWindow):
             self.timer.timeout.connect(lambda: Cronometro(str(pais.text())))
             self.timer.start(1000)
 
-        pais.deleteLater()
+        nomDelegacion = delegacion.text()
+        delegacion.deleteLater()
+
+        id = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": f"SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion = '{nomDelegacion}';"}).json()
+        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila where idDelegacion=%s;", "params":(id[0]['idDelegacion'],)})
+        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 1, fila = 1;"})
+
         self.timer = QTimer()
 
-        self.txtCronometro.setText(str(pais.text()))
+        self.txtCronometro.setText(str(nomDelegacion))
         self.Lectura = QShortcut(QKeySequence("l"), self)
         self.Cuestionar = QShortcut(QKeySequence("c"), self)
         self.Contestar = QShortcut(QKeySequence("r"), self)
         self.Lectura.activated.connect(lambda: Cronometrar("leer"))
         self.Cuestionar.activated.connect(lambda: Cronometrar("cuestionar"))
         self.Contestar.activated.connect(lambda: Cronometrar("pensar"))
-        Registrar(str(pais.text()))
+        Registrar(nomDelegacion)
+
+    def CrearHistorial(self):
+        codigo = """SELECT tabDelegaciones.nomDelegacion, tabHistorial.turnos FROM tabDelegaciones
+                    INNER JOIN tabHistorial ON tabDelegaciones.idDelegacion = tabHistorial.idDelegacion 
+                    ORDER BY tabHistorial.idHistorial"""
+        fila = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": codigo}).json()
+        self.listaHistorial.clearContents()
+        for delegacion in fila:
+            self.listaHistorial.insertRow(0)
+            self.listaHistorial.setItem(0, 0, QTableWidgetItem(delegacion["nomDelegacion"]))
+            self.listaHistorial.setItem(0, 1, QTableWidgetItem(str(delegacion["turnos"])))
 
     def Observaciones(self):         # Agenda las observaciones
         def AbrirHistorial():                   # Abre el historial de observaciones
             self.verObservaciones = HistorialObservaciones()
             self.verObservaciones.show()
-        def AnotarObservacion(idObs = 0, ):     # Añade la observación a la base de datos, reinicia el menú
+
+        def AnotarObservacion(idObs):     # Añade la observación a la base de datos, reinicia el menú
             if self.delegado:
-                self.cursor.execute("""INSERT INTO tabPuntaje (idDelegado, idObs, descObs, puntaje)
-                                    SELECT idDelegado, ?, ?, ?
-                                    FROM tabDelegados
-                                    WHERE tabDelegados.nomDelegado = ?""", (idObs, self.txtObservacion.toPlainText(), self.numPuntaje.text(), self.delegado))
-                self.conn.commit()
+                params = [idObs, self.txtObservacion.toPlainText(), self.numPuntaje.text(), self.delegado]
+                requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": """INSERT INTO tabPuntaje (idDelegado, idObs, descObs, puntaje)
+                                                                                      SELECT idDelegado, %s, %s, %s
+                                                                                      FROM tabDelegados
+                                                                                      WHERE tabDelegados.nomDelegado = %s""",
+                                                                                      "params": params})
                 self.delegado=""
                 self.txtDelegacion.setText(self.txtObservacion.setText(""))
                 self.numPuntaje.setValue(0)
         def ElegirDelegado(pais):               # Selecciona bajo que delegado se guardará la observación
             colores = ["font: 11pt 'Bahnschrift SemiLight'; background-color: #bbb; border-radius: 15px; margin-left: 5px; padding-left:5px;", "font: 11pt 'Bahnschrift SemiLight'; background-color: #ddd; border-radius: 15px; margin-left: 5px; padding-left:5px;"]
             try:
-                self.cursor.execute(f"SELECT nomDelegado FROM tabDelegados INNER JOIN tabDelegaciones ON tabDelegados.idDelegacion = tabDelegaciones.idDelegacion WHERE tabDelegaciones.nomDelegacion = ?;", (f"{pais}",))
-                delegados = self.cursor.fetchall()
-                self.btnD1.setText((str(delegados[0][0])) if delegados[0][0] != None else "")
-                self.btnD2.setText((str(delegados[1][0])) if delegados[1][0] != None else "")
+                delegados = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": """SELECT nomDelegado FROM tabDelegados 
+                                                                                                INNER JOIN tabDelegaciones 
+                                                                                                ON tabDelegados.idDelegacion = tabDelegaciones.idDelegacion 
+                                                                                                WHERE tabDelegaciones.nomDelegacion = %s;""", 
+                                                                                                "params": [pais]}).json()
+                self.btnD1.setText((str(delegados[0]["nomDelegado"])) if delegados[0]["nomDelegado"] != None else "")
+                self.btnD2.setText((str(delegados[1]["nomDelegado"])) if delegados[1]["nomDelegado"] != None else "")
 
                 self.btnD1.setEnabled(bool(self.btnD1.text()))
                 self.btnD2.setEnabled(bool(self.btnD2.text()))
@@ -233,7 +276,7 @@ class CEPBMOON(QMainWindow):
                 if self.btnD2.isEnabled() and not self.btnD1.isEnabled():
                     self.btnD2.click()
 
-                self.btnAnotar.clicked.connect(lambda: AnotarObservacion(self.delegado))
+                self.btnAnotar.clicked.connect(lambda: AnotarObservacion(idObs=0))
 
             except:
                 self.btnD1.setText("")
@@ -241,14 +284,14 @@ class CEPBMOON(QMainWindow):
                 self.btnD1.setStyleSheet(colores[1])
                 self.btnD2.setStyleSheet(colores[1])
 
-        self.cursor.execute("SELECT nomDelegacion FROM tabDelegaciones WHERE enforo = 2")
-        delegaciones = [fila["nomDelegacion"] for fila in self.cursor.fetchall()]
+        delegaciones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT nomDelegacion FROM tabDelegaciones"}).json()
+        delegaciones = [fila["nomDelegacion"] for fila in delegaciones]
         self.completerDelegacion = QCompleter(delegaciones)
         self.completerDelegacion.setCaseSensitivity(Qt.CaseInsensitive)
         self.txtDelegacion.setCompleter(self.completer)
 
         self.txtDelegacion.textChanged.connect(lambda: ElegirDelegado(self.txtDelegacion.text()))
-        self.btnHistorialObservaciones.clicked.connect(AbrirHistorial)
+        self.btnHistorialObservaciones.clicked.connect(lambda: AbrirHistorial())
 
     def PaisesEnForo(self):          # Actualizar que paises se cargarán, cargar la lista y checkboxes para seleccionar o no las delegaciones
         def PaisEnForo(state, pais): # Pone que una delegacion esté en el foro

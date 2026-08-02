@@ -6,17 +6,45 @@ conn = mysql.connector.connect(database="db_CEPBMOON",
                         host="cepbmoon-cepb-moon.c.aivencloud.com",
                         password="AVNS_tHX9YWtgYm64fJwHvSo",
                         port=27526)
-cursor = conn.cursor(dictionary=True)
 
 app = Flask(__name__)
 
-@app.get("/GETdelegaciones")
-def getDelegaciones():
-    cursor.execute("SELECT nomDelegacion FROM tabDelegaciones")
+## implementar un sistema de una variable "Cambios" y una ruta "Estados"
+## tengo que actualizar que cada POST modifique una tabla tabCambios, cambie la variable Cambios a 
+
+@app.get("/GETpasar_codigo")
+def getPasarCodigo():
+    cursor = conn.cursor(dictionary=True)
+    codigo = request.json["codigo"]
+    try:
+        params = request.json["params"]
+    except:
+        params = 0
+    if params:
+        cursor.execute(codigo, tuple(params))
+    else:
+        cursor.execute(codigo)
     return cursor.fetchall()
+    cursor.close()
+
+@app.post("/POSTpasar_codigo")
+def postPasarCodigo():
+    cursor = conn.cursor(dictionary=True)
+    codigo = request.json["codigo"]
+    try:
+        params = request.json["params"]
+    except:
+        params = 0
+    if params:
+        cursor.execute(codigo, tuple(params))
+    else:
+        cursor.execute(codigo)
+    conn.commit()
+    cursor.close()
 
 @app.post("/POSTfila_delegaciones")
 def postFila():
+    cursor = conn.cursor(dictionary=True)
     datos = request.json
     delegacion = datos["delegacion"]
     cursor.execute("SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion=%s",(delegacion,))
@@ -24,11 +52,14 @@ def postFila():
     conn.commit()
 
     return {"ok": True}
+    cursor.close()
 
 @app.get("/GETfila_delegaciones")
 def getFila():
+    cursor = conn.cursor(dictionary=True)
     cursor.execute("""SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion ORDER BY tabFila.idFila""")
     return cursor.fetchall()
+    cursor.close()
 
 if __name__ == "__main__":
     app.run(debug= True)

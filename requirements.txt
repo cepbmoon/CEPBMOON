@@ -1,6 +1,5 @@
 PyQt5
 requests
-sys
 flask
-import
 gunicorn
+mysql-connector-python

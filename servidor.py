@@ -1,11 +1,13 @@
 from flask import *
-import mysql.connector
+import pymysql
 
-conn = mysql.connector.connect(database="db_CEPBMOON",
-                        user="avnadmin",
-                        host="cepbmoon-cepb-moon.c.aivencloud.com",
-                        password="AVNS_tHX9YWtgYm64fJwHvSo",
-                        port=27526)
+conn = pymysql.connect(
+    host="cepbmoon-cepb-moon.c.aivencloud.com",
+    port=27526,
+    user="avnadmin",
+    password="AVNS_tHX9YWtgYm64fJwHvSo",
+    database="db_CEPBMOON"
+)
 
 app = Flask(__name__)
 
@@ -42,6 +44,16 @@ def postPasarCodigo():
     conn.commit()
     cursor.close()
 
+@app.route("/cambios")
+def cambios():
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM tabCambios")
+    cambios = cursor.fetchall()
+    cursor.execute("UPDATE tabCambios SET hayCambios = 0, fila = 0, historial = 0;")
+    conn.commit()
+    cursor.close()
+    return cambios
+
 @app.post("/POSTfila_delegaciones")
 def postFila():
     cursor = conn.cursor(dictionary=True)
@@ -51,8 +63,8 @@ def postFila():
     cursor.execute("INSERT INTO tabFila(idDelegacion) VALUES(%s)",(cursor.fetchone()["idDelegacion"],))
     conn.commit()
 
-    return {"ok": True}
     cursor.close()
+    return {"ok": True}
 
 @app.get("/GETfila_delegaciones")
 def getFila():

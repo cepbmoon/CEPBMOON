@@ -111,7 +111,7 @@ class CEPBMOON(QMainWindow):
         requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 1, fila = 1;"})
     
     def Gets(self):
-        cambios = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios"}).json()
+        cambios = requests.get(self.SERVIDOR + "/cambios").json()
         if cambios[0]["hayCambios"]:
             if cambios[0]["fila"]:
                 self.CrearFila()

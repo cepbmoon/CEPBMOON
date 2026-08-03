@@ -79,6 +79,10 @@ class CEPBMOON(QMainWindow):
         self.CrearFila()
         self.CrearHistorial()
 
+        self.versionCambios = 1
+        self.versionFila = 1
+        self.versionHistorial = 1
+
         # self.NombrarMesaAlAbrir()                       
         # self.PaisesEnForo()                             
         # self.DelegacionesEnForo(self.Delegados)
@@ -108,16 +112,18 @@ class CEPBMOON(QMainWindow):
     def LimpiarFila(self):
         self.LimpiarLayout(self.scrollLayout)
         requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila"})
-        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 1, fila = 1;"})
+        versiones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios;"}).json()
+        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": f"UPDATE tabCambios SET versionCambios = {versiones[0]["versionCambios"] + 1}, versionFila = {versiones[0]["versionFila"] + 1};"})
     
     def Gets(self):
         cambios = requests.get(self.SERVIDOR + "/cambios").json()
-        if cambios[0]["hayCambios"]:
-            if cambios[0]["fila"]:
+        if cambios[0]["versionCambios"] == self.versionCambios:
+            if cambios[0]["versionFila"] == self.versionFila:
                 self.CrearFila()
-            if cambios[0]["historial"]:
+                self.versionFila = cambios[0]["versionFila"]
+            if cambios[0]["versionHistorial"] == self.versionHistorial:
                 self.CrearHistorial()
-            requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 0, fila = 0, historial = 0;"})
+                self.versionHistorial = cambios[0]["versionHistorial"]
         self.correrGETs.start(1000)
 
     def Buscador(self):              # Actualizar el buscador cuando se cambia los paises en un foro
@@ -150,7 +156,9 @@ class CEPBMOON(QMainWindow):
                 self.txtBuscador.clear()
                 return
         requests.post(self.SERVIDOR + "/POSTfila_delegaciones", json={"delegacion": delegacion})
-        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 1, fila = 1;"})
+
+        versiones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios;"}).json()
+        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": f"UPDATE tabCambios SET versionCambios = {versiones[0]["versionCambios"] + 1}, versionFila = {versiones[0]["versionFila"] + 1};"})
         self.txtBuscador.clear()
 
     def CrearFila(self):             # Actualiza la fila de delegaciones en cola
@@ -178,7 +186,8 @@ class CEPBMOON(QMainWindow):
                 requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": """INSERT INTO tabHistorial (idDelegacion, turnos)
                                                                                       SELECT idDelegacion, %s FROM tabDelegaciones 
                                                                                       WHERE tabDelegaciones.nomDelegacion = %s""", "params":(turnos+1, nomDelegacion,)})
-                requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 1, historial = 1;"})
+                versiones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios;"}).json()
+                requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": f"UPDATE tabCambios SET versionCambios = {versiones[0]["versionCambios"] + 1}, versionHistorial = {versiones[0]["versionFila"] + 1};"})
         def Cronometrar(tiempo):     # Inicia el cronómetro para las delegaciones
             def Cronometro(pais):
                 if self.time == QTime(0, 0, 0):
@@ -215,7 +224,8 @@ class CEPBMOON(QMainWindow):
 
         id = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": f"SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion = '{nomDelegacion}';"}).json()
         requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila where idDelegacion=%s;", "params":(id[0]['idDelegacion'],)})
-        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "UPDATE tabCambios SET hayCambios = 1, fila = 1;"})
+        versiones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios;"}).json()
+        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": f"UPDATE tabCambios SET versionCambios = {versiones[0]["versionCambios"] + 1}, versionFila = {versiones[0]["versionFila"] + 1};"})
 
         self.timer = QTimer()
 

@@ -6,7 +6,8 @@ conn = pymysql.connect(
     port=27526,
     user="avnadmin",
     password="AVNS_tHX9YWtgYm64fJwHvSo",
-    database="db_CEPBMOON"
+    database="db_CEPBMOON",
+    cursorclass=pymysql.cursors.DictCursor
 )
 
 app = Flask(__name__)
@@ -16,7 +17,7 @@ app = Flask(__name__)
 
 @app.get("/GETpasar_codigo")
 def getPasarCodigo():
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     codigo = request.json["codigo"]
     try:
         params = request.json["params"]
@@ -26,12 +27,13 @@ def getPasarCodigo():
         cursor.execute(codigo, tuple(params))
     else:
         cursor.execute(codigo)
-    return cursor.fetchall()
+    respuesta = cursor.fetchall()
     cursor.close()
+    return jsonify(respuesta)
 
 @app.post("/POSTpasar_codigo")
 def postPasarCodigo():
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     codigo = request.json["codigo"]
     try:
         params = request.json["params"]
@@ -43,20 +45,21 @@ def postPasarCodigo():
         cursor.execute(codigo)
     conn.commit()
     cursor.close()
+    return {"ok": True}
 
 @app.route("/cambios")
 def cambios():
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM tabCambios")
     cambios = cursor.fetchall()
     cursor.execute("UPDATE tabCambios SET hayCambios = 0, fila = 0, historial = 0;")
     conn.commit()
     cursor.close()
-    return cambios
+    return jsonify(cambios)
 
 @app.post("/POSTfila_delegaciones")
 def postFila():
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     datos = request.json
     delegacion = datos["delegacion"]
     cursor.execute("SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion=%s",(delegacion,))
@@ -68,7 +71,7 @@ def postFila():
 
 @app.get("/GETfila_delegaciones")
 def getFila():
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion ORDER BY tabFila.idFila""")
     return cursor.fetchall()
     cursor.close()

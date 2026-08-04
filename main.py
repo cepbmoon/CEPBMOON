@@ -6,44 +6,44 @@ from PyQt5.QtGui import *
 import requests
 import sys
 
-# class NombrarMesa(QDialog):
-#     def __init__(self, msj):
-#         super().__init__()
-#         loadUi("dialog.ui", self)
-#         self.setWindowFlags(Qt.WindowStaysOnTopHint)
-#         if msj == 1:
-#             self.msjBienvenida.setMaximumHeight(0)
+class NombrarMesa(QDialog):
+    def __init__(self, msj):
+        super().__init__()
+        loadUi("dialog.ui", self)
+        self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        if msj == 1:
+            self.msjBienvenida.setMaximumHeight(0)
 
-#         self.btnGuardar.clicked.connect(self.GuardarNombres)
-#         self.Nombres()
+        self.btnGuardar.clicked.connect(self.GuardarNombres)
+        self.Nombres()
 
-#     def Nombres(self):
-#         self.cursor.execute("SELECT * FROM tabMesa")
-#         mesa = self.cursor.fetchone()
+    def Nombres(self):
+        self.cursor.execute("SELECT * FROM tabMesa")
+        mesa = self.cursor.fetchone()
 
-#         self.nomPresidente.setText(mesa["Presidente"] or "")
-#         self.nomModerador.setText(mesa["Moderador"] or "")
-#         self.nomSecretario.setText(mesa["Secretario"] or "")
-#         self.nomEvaluador.setText(mesa["Evaluador"] or "")
-#         self.nomForo.setText(mesa["Foro"] or "")
-#         self.ano.setText(str(mesa["Año"]) or "")
+        self.nomPresidente.setText(mesa["Presidente"] or "")
+        self.nomModerador.setText(mesa["Moderador"] or "")
+        self.nomSecretario.setText(mesa["Secretario"] or "")
+        self.nomEvaluador.setText(mesa["Evaluador"] or "")
+        self.nomForo.setText(mesa["Foro"] or "")
+        self.ano.setText(str(mesa["Año"]) or "")
 
-#     def GuardarNombres(self):
-#         presidente = self.nomPresidente.text() or None
-#         moderador = self.nomModerador.text() or None
-#         secretario = self.nomSecretario.text() or None
-#         evaluador = self.nomEvaluador.text() or None
-#         foro = self.nomForo.text().upper() or None
-#         ano = self.ano.text() or None
-#         self.cursor.execute(f"UPDATE tabMesa SET Presidente= ?, Moderador= ?, Secretario= ?, Evaluador= ?, Foro = ?, Año = ?;", (presidente, moderador, secretario, evaluador, foro, ano))
-#         self.conn.commit()
-#         self.close()
+    def GuardarNombres(self):
+        presidente = self.nomPresidente.text() or None
+        moderador = self.nomModerador.text() or None
+        secretario = self.nomSecretario.text() or None
+        evaluador = self.nomEvaluador.text() or None
+        foro = self.nomForo.text().upper() or None
+        ano = self.ano.text() or None
+        self.cursor.execute(f"UPDATE tabMesa SET Presidente= ?, Moderador= ?, Secretario= ?, Evaluador= ?, Foro = ?, Año = ?;", (presidente, moderador, secretario, evaluador, foro, ano))
+        self.conn.commit()
+        self.close()
 
-#     def closeEvent(self, a0):
-#         if self.nomForo.text():
-#             super().closeEvent(a0)
-#         else:
-#             a0.ignore()
+    def closeEvent(self, a0):
+        if self.nomForo.text():
+            super().closeEvent(a0)
+        else:
+            a0.ignore()
 
 class HistorialObservaciones(QMainWindow):
     def __init__(self):
@@ -107,23 +107,23 @@ class CEPBMOON(QMainWindow):
 
         self.correrGETs = QTimer(self)
         self.correrGETs.timeout.connect(self.Gets)
-        self.correrGETs.start(1000)
+        self.correrGETs.start(500)
 
     def LimpiarFila(self):
         self.LimpiarLayout(self.scrollLayout)
         requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila"})
-        versiones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios;"}).json()
-        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": f"UPDATE tabCambios SET versionCambios = {versiones[0]["versionCambios"] + 1}, versionFila = {versiones[0]["versionFila"] + 1};"})
+        requests.post(self.SERVIDOR + "/cambios/cambiarFila")
     
-    def Gets(self):
-        cambios = requests.get(self.SERVIDOR + "/cambios").json()
-        if cambios[0]["versionCambios"] == self.versionCambios:
-            if cambios[0]["versionFila"] == self.versionFila:
+    def Gets(self):                  # Revisa todos los cambios y retorna ok true 👌👌
+        cambios = requests.get(self.SERVIDOR + "/cambios/verCambios").json()
+        if cambios[0]["versionCambios"] != self.versionCambios:
+            if cambios[0]["versionFila"] != self.versionFila:
                 self.CrearFila()
                 self.versionFila = cambios[0]["versionFila"]
-            if cambios[0]["versionHistorial"] == self.versionHistorial:
+            if cambios[0]["versionHistorial"] != self.versionHistorial:
                 self.CrearHistorial()
                 self.versionHistorial = cambios[0]["versionHistorial"]
+            self.versionCambios = cambios[0]["versionCambios"]
         self.correrGETs.start(1000)
 
     def Buscador(self):              # Actualizar el buscador cuando se cambia los paises en un foro
@@ -157,8 +157,7 @@ class CEPBMOON(QMainWindow):
                 return
         requests.post(self.SERVIDOR + "/POSTfila_delegaciones", json={"delegacion": delegacion})
 
-        versiones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios;"}).json()
-        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": f"UPDATE tabCambios SET versionCambios = {versiones[0]["versionCambios"] + 1}, versionFila = {versiones[0]["versionFila"] + 1};"})
+        requests.post(self.SERVIDOR + "/cambios/cambiarFila")
         self.txtBuscador.clear()
 
     def CrearFila(self):             # Actualiza la fila de delegaciones en cola
@@ -186,8 +185,7 @@ class CEPBMOON(QMainWindow):
                 requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": """INSERT INTO tabHistorial (idDelegacion, turnos)
                                                                                       SELECT idDelegacion, %s FROM tabDelegaciones 
                                                                                       WHERE tabDelegaciones.nomDelegacion = %s""", "params":(turnos+1, nomDelegacion,)})
-                versiones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios;"}).json()
-                requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": f"UPDATE tabCambios SET versionCambios = {versiones[0]["versionCambios"] + 1}, versionHistorial = {versiones[0]["versionFila"] + 1};"})
+                requests.post(self.SERVIDOR + "/cambios/cambiarHistorial")
         def Cronometrar(tiempo):     # Inicia el cronómetro para las delegaciones
             def Cronometro(pais):
                 if self.time == QTime(0, 0, 0):
@@ -224,8 +222,7 @@ class CEPBMOON(QMainWindow):
 
         id = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": f"SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion = '{nomDelegacion}';"}).json()
         requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila where idDelegacion=%s;", "params":(id[0]['idDelegacion'],)})
-        versiones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT * FROM tabCambios;"}).json()
-        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": f"UPDATE tabCambios SET versionCambios = {versiones[0]["versionCambios"] + 1}, versionFila = {versiones[0]["versionFila"] + 1};"})
+        requests.post(self.SERVIDOR + "/cambios/cambiarFila")
 
         self.timer = QTimer()
 
@@ -238,7 +235,7 @@ class CEPBMOON(QMainWindow):
         self.Contestar.activated.connect(lambda: Cronometrar("pensar"))
         Registrar(nomDelegacion)
 
-    def CrearHistorial(self):
+    def CrearHistorial(self):        # Crea... el.... hietorial...... PELOTUDO
         codigo = """SELECT tabDelegaciones.nomDelegacion, tabHistorial.turnos FROM tabDelegaciones
                     INNER JOIN tabHistorial ON tabDelegaciones.idDelegacion = tabHistorial.idDelegacion 
                     ORDER BY tabHistorial.idHistorial"""
@@ -440,11 +437,6 @@ class CEPBMOON(QMainWindow):
         self.listaPaises_2.setMaximumHeight(0)
         self.Delegados_3.setMaximumHeight(0)
         nombre.setMaximumHeight(16777215)
-    
-    # def closeEvent(self, a0):        #Reiniciar los turnos de las delegaciones al cerrar el programa, crear un pdf que registra lo que sucedió en la sesión
-    #     self.cursor.execute("""UPDATE tabDelegaciones SET turnos = 0""")
-    #     self.conn.commit()
-    #     self.conn.close()
 
 app= QApplication(sys.argv)
 ventana= CEPBMOON()

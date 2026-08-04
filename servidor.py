@@ -12,9 +12,6 @@ conn = pymysql.connect(
 
 app = Flask(__name__)
 
-## implementar un sistema de una variable "Cambios" y una ruta "Estados"
-## tengo que actualizar que cada POST modifique una tabla tabCambios, cambie la variable Cambios a 
-
 @app.get("/GETpasar_codigo")
 def getPasarCodigo():
     cursor = conn.cursor()
@@ -47,15 +44,29 @@ def postPasarCodigo():
     cursor.close()
     return {"ok": True}
 
-@app.route("/cambios")
-def cambios():
+@app.get("/cambios/verCambios")
+def verCambios():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM tabCambios")
     cambios = cursor.fetchall()
-    cursor.execute("UPDATE tabCambios SET hayCambios = 0, fila = 0, historial = 0;")
-    conn.commit()
     cursor.close()
     return jsonify(cambios)
+
+@app.post("/cambios/cambiarFila")
+def cambiarFila():
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tabCambios;")
+    versiones = cursor.fetchall()
+    cursor.execute(f"UPDATE tabCambios SET versionCambios = {int(versiones[0]["versionCambios"]) + 1}, versionFila = {int(versiones[0]["versionFila"]) + 1};")
+    return {"ok": True}
+
+@app.post("/cambios/cambiarHistorial")
+def cambiarHistorial():
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tabCambios;")
+    versiones = cursor.fetchall()
+    cursor.execute(f"UPDATE tabCambios SET versionCambios = {int(versiones[0]["versionCambios"]) + 1}, versionHistorial = {int(versiones[0]["versionHistorial"]) + 1};")
+    return {"ok": True}
 
 @app.post("/POSTfila_delegaciones")
 def postFila():

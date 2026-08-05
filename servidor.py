@@ -47,25 +47,28 @@ def postPasarCodigo():
 @app.get("/cambios/verCambios")
 def verCambios():
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tabCambios")
+    sesion = request.json["idSesion"]
+    cursor.execute(f"SELECT * FROM tabCambios WHERE idSesion = {sesion};")
     cambios = cursor.fetchall()
-    cursor.close()
+    cursor.close() 
     return jsonify(cambios)
 
 @app.post("/cambios/cambiarFila")
 def cambiarFila():
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tabCambios;")
+    sesion = request.json["idSesion"]
+    cursor.execute(f"SELECT * FROM tabCambios WHERE idSesion = {sesion};")
     versiones = cursor.fetchall()
-    cursor.execute(f"UPDATE tabCambios SET versionCambios = {int(versiones[0]["versionCambios"]) + 1}, versionFila = {int(versiones[0]["versionFila"]) + 1};")
+    cursor.execute(f"UPDATE tabCambios SET versionCambios = {int(versiones[0]["versionCambios"]) + 1}, versionFila = {int(versiones[0]["versionFila"]) + 1} WHERE idSesion = {sesion};")
     return {"ok": True}
 
 @app.post("/cambios/cambiarHistorial")
 def cambiarHistorial():
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tabCambios;")
+    sesion = request.json["idSesion"]
+    cursor.execute(f"SELECT * FROM tabCambios WHERE idSesion = {sesion};")
     versiones = cursor.fetchall()
-    cursor.execute(f"UPDATE tabCambios SET versionCambios = {int(versiones[0]["versionCambios"]) + 1}, versionHistorial = {int(versiones[0]["versionHistorial"]) + 1};")
+    cursor.execute(f"UPDATE tabCambios SET versionCambios = {int(versiones[0]["versionCambios"]) + 1}, versionHistorial = {int(versiones[0]["versionHistorial"]) + 1} WHERE idSesion = {sesion};")
     return {"ok": True}
 
 @app.post("/POSTfila_delegaciones")

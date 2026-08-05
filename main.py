@@ -82,6 +82,7 @@ class CEPBMOON(QMainWindow):
         self.versionCambios = 1
         self.versionFila = 1
         self.versionHistorial = 1
+        self.idSesion = 1
 
         # self.NombrarMesaAlAbrir()                       
         # self.PaisesEnForo()                             
@@ -108,14 +109,14 @@ class CEPBMOON(QMainWindow):
         self.correrGETs = QTimer(self)
         self.correrGETs.timeout.connect(self.Gets)
         self.correrGETs.start(500)
-
+ 
     def LimpiarFila(self):
         self.LimpiarLayout(self.scrollLayout)
         requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila"})
         requests.post(self.SERVIDOR + "/cambios/cambiarFila")
     
     def Gets(self):                  # Revisa todos los cambios y retorna ok true 👌👌
-        cambios = requests.get(self.SERVIDOR + "/cambios/verCambios").json()
+        cambios = requests.get(self.SERVIDOR + "/cambios/verCambios", json={"idSesion": self.idSesion}).json()
         if cambios[0]["versionCambios"] != self.versionCambios:
             if cambios[0]["versionFila"] != self.versionFila:
                 self.CrearFila()

@@ -6,6 +6,46 @@ from PyQt5.QtGui import *
 import requests
 import sys
 
+class ConectarForo(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.SERVIDOR = "http://127.0.0.1:5000"  #Va a ser el link a render!!
+        loadUi("conectarMesa.ui", self)
+        self.btnVolverCrear.clicked.connect(lambda: self.funcionquetemandadeunoaotro(self.wgtCrear))
+        self.btnVolverIniciar.clicked.connect(lambda: self.funcionquetemandadeunoaotro(self.wgtIngresar))
+
+        self.btnIniciarSesion.clicked.connect(self.IniciarSesion)
+        self.btnCrearSesion.clicked.connect(self.CrearSesion)
+
+        self.idSesion=1
+
+    def funcionquetemandadeunoaotro(self, nombre):
+        self.wgtCrear.setMaximumWidth(0)
+        self.wgtIngresar.setMaximumWidth(0)
+        nombre.setMaximumWidth(16777215)
+
+    def CrearSesion(self):
+        if self.txtCodigoCREAR.text() != self.txtConfCodigo.text():
+            self.txtErrorCREAR.setText("Las contraseñas no son iguales")
+        else:
+            respuesta = requests.get(self.SERVIDOR + "/POSTcrearForo", json={"params": {"nomForo":self.txtNomForoCREAR.text().upper() or "", "contraseña": self.txtCodigoCREAR.text() or ""}}).json()
+            try:
+                self.idSesion = respuesta["idSesion"]
+                self.close()
+                return self.idSesion
+            except:
+                self.txtErrorCREAR.setText(respuesta["error"])
+            return self.idSesion
+
+    def IniciarSesion(self):
+        respuesta = requests.get(self.SERVIDOR + "/GETingresarForo", json={"params": {"nomForo":self.txtNomForoINICIAR.text().upper() or "", "contraseña": self.txtCodigoINICIAR.text() or ""}}).json()
+        try:
+            self.idSesion = respuesta["idSesion"]
+            self.close()
+            return self.idSesion
+        except:
+            self.txtError.setText(respuesta["error"])
+    
 class NombrarMesa(QDialog):
     def __init__(self, msj):
         super().__init__()
@@ -73,16 +113,20 @@ class CEPBMOON(QMainWindow):
         self.SERVIDOR = "http://127.0.0.1:5000"  #Va a ser el link a render!!
         super().__init__()
         loadUi("main.ui", self)
+        self.idSesion = 0
         self.ConectarFunciones()                        # Se llaman todas la funciones
         self.Buscador()                                 
-
         self.CrearFila()
         self.CrearHistorial()
 
+        self.conectarSesion = ConectarForo()
+        self.conectarSesion.setModal(True)
+        self.conectarSesion.show()
+
+        #self.idSesion = sesion
         self.versionCambios = 1
         self.versionFila = 1
         self.versionHistorial = 1
-        self.idSesion = 1
 
         # self.NombrarMesaAlAbrir()                       
         # self.PaisesEnForo()                             
@@ -105,10 +149,10 @@ class CEPBMOON(QMainWindow):
         self.btnLimpiar.clicked.connect(self.LimpiarFila)
         self.listaForo.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.listaHistorial.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)   
-
-        self.correrGETs = QTimer(self)
-        self.correrGETs.timeout.connect(self.Gets)
-        self.correrGETs.start(500)
+        if self.idSesion!=0:
+            self.correrGETs = QTimer(self)
+            self.correrGETs.timeout.connect(self.Gets)
+            self.correrGETs.start(500)
  
     def LimpiarFila(self):
         self.LimpiarLayout(self.scrollLayout)
@@ -425,6 +469,11 @@ class CEPBMOON(QMainWindow):
 
         self.btn_verPaises.clicked.connect(lambda _, c=self.listaPaises_2: self.Expandir(c))
         self.btn_nombrarPaises.clicked.connect(lambda _, c=self.Delegados_3: (self.Expandir(c), self.DelegacionesEnForo(self.Delegados)))
+
+        self.conectarSesion = ConectarForo()
+        self.conectarSesion.setModal(True)
+        self.btn_conectarMesa.clicked.connect(lambda: self.conectarSesion.show())
+
         self.nombrarMesa1 = NombrarMesa(1)
         self.nombrarMesa1.setModal(True)
         self.btn_nombrarMesa.clicked.connect(lambda: self.nombrarMesa1.show())

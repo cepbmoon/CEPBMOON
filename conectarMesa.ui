@@ -25,6 +25,12 @@
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QWidget" name="wgtIngresar" native="true">
+        <property name="maximumSize">
+         <size>
+          <width>0</width>
+          <height>16777215</height>
+         </size>
+        </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
           <widget class="QLabel" name="label_4">
@@ -119,6 +125,18 @@ padding-left:5px;</string>
           </spacer>
          </item>
          <item>
+          <widget class="QLabel" name="txtError">
+           <property name="styleSheet">
+            <string notr="true">font: 12pt &quot;Bahnschrift light&quot;;
+text-align: center;
+color: rgb(209, 64, 66);</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QWidget" name="widget_4" native="true">
            <property name="minimumSize">
             <size>
@@ -168,12 +186,6 @@ padding-left:5px;</string>
       </item>
       <item>
        <widget class="QWidget" name="wgtCrear" native="true">
-        <property name="maximumSize">
-         <size>
-          <width>0</width>
-          <height>16777215</height>
-         </size>
-        </property>
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
           <widget class="QLabel" name="label_3">
@@ -293,6 +305,18 @@ padding-left:5px;</string>
             </size>
            </property>
           </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="txtErrorCREAR">
+           <property name="styleSheet">
+            <string notr="true">font: 12pt &quot;Bahnschrift light&quot;;
+text-align: center;
+color: rgb(209, 64, 66);</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QWidget" name="widget_2" native="true">

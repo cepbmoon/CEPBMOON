@@ -17,7 +17,7 @@ class ConectarForo(QDialog):
         self.btnIniciarSesion.clicked.connect(self.IniciarSesion)
         self.btnCrearSesion.clicked.connect(self.CrearSesion)
 
-        self.idSesion=1
+        self.idSesion=0
 
     def funcionquetemandadeunoaotro(self, nombre):
         self.wgtCrear.setMaximumWidth(0)
@@ -28,14 +28,15 @@ class ConectarForo(QDialog):
         if self.txtCodigoCREAR.text() != self.txtConfCodigo.text():
             self.txtErrorCREAR.setText("Las contraseñas no son iguales")
         else:
-            respuesta = requests.get(self.SERVIDOR + "/POSTcrearForo", json={"params": {"nomForo":self.txtNomForoCREAR.text().upper() or "", "contraseña": self.txtCodigoCREAR.text() or ""}}).json()
-            try:
-                self.idSesion = respuesta["idSesion"]
-                self.close()
+            if self.txtCodigoCREAR.text() and self.txtConfCodigo.text() and self.txtNomForoCREAR.text():
+                respuesta = requests.get(self.SERVIDOR + "/POSTcrearForo", json={"params": {"nomForo":self.txtNomForoCREAR.text().upper(), "contraseña": self.txtCodigoCREAR.text()}}).json()
+                try:
+                    self.idSesion = int(respuesta["idSesion"])
+                    self.close()
+                    return self.idSesion
+                except:
+                    self.txtErrorCREAR.setText(respuesta["error"])
                 return self.idSesion
-            except:
-                self.txtErrorCREAR.setText(respuesta["error"])
-            return self.idSesion
 
     def IniciarSesion(self):
         respuesta = requests.get(self.SERVIDOR + "/GETingresarForo", json={"params": {"nomForo":self.txtNomForoINICIAR.text().upper() or "", "contraseña": self.txtCodigoINICIAR.text() or ""}}).json()
@@ -45,6 +46,12 @@ class ConectarForo(QDialog):
             return self.idSesion
         except:
             self.txtError.setText(respuesta["error"])
+
+    def closeEvent(self, a0):
+        if self.idSesion:
+            super().closeEvent(a0)
+        else:
+            a0.ignore()
     
 class NombrarMesa(QDialog):
     def __init__(self, msj):
@@ -113,29 +120,25 @@ class CEPBMOON(QMainWindow):
         self.SERVIDOR = "http://127.0.0.1:5000"  #Va a ser el link a render!!
         super().__init__()
         loadUi("main.ui", self)
+        self.setEnabled(False)
         self.idSesion = 0
-        self.ConectarFunciones()                        # Se llaman todas la funciones
-        self.Buscador()                                 
-        self.CrearFila()
-        self.CrearHistorial()
-
         self.conectarSesion = ConectarForo()
         self.conectarSesion.setModal(True)
-        self.conectarSesion.show()
+        self.conectarSesion.finished.connect(self.ConectarFunciones)
+        self.conectarSesion.show()                        # Se llaman todas la funciones
 
-        #self.idSesion = sesion
         self.versionCambios = 1
         self.versionFila = 1
         self.versionHistorial = 1
 
-        # self.NombrarMesaAlAbrir()                       
-        # self.PaisesEnForo()                             
-        # self.DelegacionesEnForo(self.Delegados)
-        # self.Configuraciones()
-        # self.Cronometro()
-        self.Observaciones()
-
     def ConectarFunciones(self):    # Conecta los botones principales con sus funciones
+        if self.conectarSesion.idSesion:
+            self.idSesion = self.conectarSesion.idSesion
+            self.setEnabled(True)
+            self.correrGETs = QTimer(self)
+            self.correrGETs.start(500)
+            self.correrGETs.timeout.connect(self.Gets)
+
         self.btn1.clicked.connect(lambda _, c=self.Configuraciones_2: self.Expandir(c))
         self.btn2.clicked.connect(lambda _, c=self.Anotaciones_2: self.Expandir(c))
         self.btn3.clicked.connect(lambda _, c=self.Cronometro_2: self.Expandir(c))
@@ -149,11 +152,15 @@ class CEPBMOON(QMainWindow):
         self.btnLimpiar.clicked.connect(self.LimpiarFila)
         self.listaForo.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.listaHistorial.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)   
-        if self.idSesion!=0:
-            self.correrGETs = QTimer(self)
-            self.correrGETs.timeout.connect(self.Gets)
-            self.correrGETs.start(500)
- 
+
+        self.Buscador()                                 
+        # self.NombrarMesaAlAbrir()                       
+        # self.PaisesEnForo()                             
+        # self.DelegacionesEnForo(self.Delegados)
+        # self.Configuraciones()
+        # self.Cronometro()
+        self.Observaciones()
+
     def LimpiarFila(self):
         self.LimpiarLayout(self.scrollLayout)
         requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila"})

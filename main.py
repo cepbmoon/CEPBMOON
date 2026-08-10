@@ -124,8 +124,8 @@ class CEPBMOON(QMainWindow):
         self.idSesion = 0
         self.conectarSesion = ConectarForo()
         self.conectarSesion.setModal(True)
-        self.conectarSesion.finished.connect(self.ConectarFunciones)
-        self.conectarSesion.show()                        # Se llaman todas la funciones
+        self.conectarSesion.finished.connect(self.ConectarFunciones)    # Se llaman todas la funciones
+        self.conectarSesion.show()
 
         self.versionCambios = 1
         self.versionFila = 1
@@ -163,16 +163,17 @@ class CEPBMOON(QMainWindow):
 
     def LimpiarFila(self):
         self.LimpiarLayout(self.scrollLayout)
-        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila"})
-        requests.post(self.SERVIDOR + "/cambios/cambiarFila")
+        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila",
+                                                                 "idSesion": self.idSesion})
+        requests.post(self.SERVIDOR + "/cambios/cambiarFila", json={"idSesion": self.idSesion})
     
     def Gets(self):                  # Revisa todos los cambios y retorna ok true 👌👌
         cambios = requests.get(self.SERVIDOR + "/cambios/verCambios", json={"idSesion": self.idSesion}).json()
-        if cambios[0]["versionCambios"] != self.versionCambios:
-            if cambios[0]["versionFila"] != self.versionFila:
+        if int(cambios[0]["versionCambios"]) != int(self.versionCambios):
+            if int(cambios[0]["versionFila"]) != int(self.versionFila):
                 self.CrearFila()
                 self.versionFila = cambios[0]["versionFila"]
-            if cambios[0]["versionHistorial"] != self.versionHistorial:
+            if int(cambios[0]["versionHistorial"]) != int(self.versionHistorial):
                 self.CrearHistorial()
                 self.versionHistorial = cambios[0]["versionHistorial"]
             self.versionCambios = cambios[0]["versionCambios"]
@@ -207,9 +208,9 @@ class CEPBMOON(QMainWindow):
             if isinstance(widget, QPushButton) and widget.text() == delegacion:
                 self.txtBuscador.clear()
                 return
-        requests.post(self.SERVIDOR + "/POSTfila_delegaciones", json={"delegacion": delegacion})
+        requests.post(self.SERVIDOR + "/POSTfila_delegaciones", json={"delegacion": delegacion, "idSesion": self.idSesion})
 
-        requests.post(self.SERVIDOR + "/cambios/cambiarFila")
+        requests.post(self.SERVIDOR + "/cambios/cambiarFila", json={"idSesion": self.idSesion})
         self.txtBuscador.clear()
 
     def CrearFila(self):             # Actualiza la fila de delegaciones en cola
@@ -237,7 +238,7 @@ class CEPBMOON(QMainWindow):
                 requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": """INSERT INTO tabHistorial (idDelegacion, turnos)
                                                                                       SELECT idDelegacion, %s FROM tabDelegaciones 
                                                                                       WHERE tabDelegaciones.nomDelegacion = %s""", "params":(turnos+1, nomDelegacion,)})
-                requests.post(self.SERVIDOR + "/cambios/cambiarHistorial")
+                requests.post(self.SERVIDOR + "/cambios/cambiarHistorial", json={"idSesion": self.idSesion})
         def Cronometrar(tiempo):     # Inicia el cronómetro para las delegaciones
             def Cronometro(pais):
                 if self.time == QTime(0, 0, 0):
@@ -274,7 +275,7 @@ class CEPBMOON(QMainWindow):
 
         id = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": f"SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion = '{nomDelegacion}';"}).json()
         requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila where idDelegacion=%s;", "params":(id[0]['idDelegacion'],)})
-        requests.post(self.SERVIDOR + "/cambios/cambiarFila")
+        requests.post(self.SERVIDOR + "/cambios/cambiarFila", json={"idSesion": self.idSesion})
 
         self.timer = QTimer()
 
@@ -288,10 +289,7 @@ class CEPBMOON(QMainWindow):
         Registrar(nomDelegacion)
 
     def CrearHistorial(self):        # Crea... el.... hietorial...... PELOTUDO
-        codigo = """SELECT tabDelegaciones.nomDelegacion, tabHistorial.turnos FROM tabDelegaciones
-                    INNER JOIN tabHistorial ON tabDelegaciones.idDelegacion = tabHistorial.idDelegacion 
-                    ORDER BY tabHistorial.idHistorial"""
-        fila = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": codigo}).json()
+        fila = requests.get(self.SERVIDOR + "/GEThistorial", json={"idSesion": self.idSesion}).json()
         self.listaHistorial.clearContents()
         for delegacion in fila:
             self.listaHistorial.insertRow(0)

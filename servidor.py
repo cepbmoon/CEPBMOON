@@ -25,9 +25,9 @@ class conectarMesa():
             cursor.execute("SELECT idSesion FROM tabSesiones WHERE nomForo = %s;", (params["nomForo"],))
             nom = cursor.fetchall()
             if nom:                        # La contraseña está equivocada
-                return {"error":"Contraseña equivocada"}
+                return {"error": "Contraseña equivocada"}
                                     # No existe el foro
-            return {"error":"No se encuentra el foro"}
+            return {"error": "No se encuentra el foro"}
 
     @app.get("/POSTcrearForo")
     def crearForo():
@@ -41,7 +41,9 @@ class conectarMesa():
             cursor.execute("INSERT INTO tabSesiones(nomForo, contraseña) VALUES(%s,%s);", (params["nomForo"], params["contraseña"],))
             conn.commit()
             cursor.execute("SELECT idSesion FROM tabSesiones WHERE nomForo = %s", (params["nomForo"],))
-            return {"idSesion": cursor.fetchone()["idSesion"]}
+            sesion = cursor.fetchone()["idSesion"]
+            cursor.execute("INSERT INTO tabCambios(idSesion, versionCambios, versionFila, versionHistorial) VALUES(%s, 0, 0, 0)", (sesion,))
+            return {"idSesion": sesion}
 
 class mainpy():
     @app.get("/GETpasar_codigo")
@@ -106,10 +108,10 @@ class mainpy():
     @app.post("/POSTfila_delegaciones")
     def postFila():
         cursor = conn.cursor()
-        datos = request.json
-        delegacion = datos["delegacion"]
+        delegacion = request.json["delegacion"]
+        sesion = request.json["idSesion"]
         cursor.execute("SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion=%s",(delegacion,))
-        cursor.execute("INSERT INTO tabFila(idDelegacion) VALUES(%s)",(cursor.fetchone()["idDelegacion"],))
+        cursor.execute("INSERT INTO tabFila(idDelegacion, idSesion) VALUES(%s, %s)",(cursor.fetchone()["idDelegacion"], sesion,))
         conn.commit()
 
         cursor.close()
@@ -118,7 +120,30 @@ class mainpy():
     @app.get("/GETfila_delegaciones")
     def getFila():
         cursor = conn.cursor()
-        cursor.execute("""SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion ORDER BY tabFila.idFila""")
+        sesion = request.json["idSesion"]
+        cursor.execute("""SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones
+                        INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion
+                        ORDER BY tabFila.idFila
+                        WHERE idSesion = %s""", (sesion,))
+        cursor.close()
+        return cursor.fetchall()
+
+    @app.post("/limpiarFila")
+    def limpiarFila():
+        cursor = conn.cursor()
+        sesion = request.json["idSesion"]
+        cursor.execute("delete from tabFila WHERE idSesion = %s", (sesion,))
+        conn.commit()
+        cursor.close()
+        return {"ok": True}
+
+    @app.get("/GEThistorial")
+    def postHistorial():
+        cursor = conn.cursor()
+        sesion = request.json["idSesion"]
+        cursor.execute("""SELECT tabDelegaciones.nomDelegacion, tabHistorial.turnos FROM tabDelegaciones
+                    INNER JOIN tabHistorial ON tabDelegaciones.idDelegacion = tabHistorial.idDelegacion 
+                    ORDER BY tabHistorial.idHistorial""")
         cursor.close()
         return cursor.fetchall()
 

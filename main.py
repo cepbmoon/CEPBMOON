@@ -168,14 +168,14 @@ class CEPBMOON(QMainWindow):
     
     def Gets(self):                  # Revisa todos los cambios y retorna ok true 👌👌
         cambios = requests.get(self.SERVIDOR + "/cambios/verCambios", json={"idSesion": self.idSesion}).json()
-        if int(cambios[0]["versionCambios"]) != int(self.versionCambios):
-            if int(cambios[0]["versionFila"]) != int(self.versionFila):
+        if int(cambios["versionCambios"]) != int(self.versionCambios):
+            if int(cambios["versionFila"]) != int(self.versionFila):
                 self.CrearFila()
-                self.versionFila = cambios[0]["versionFila"]
-            if int(cambios[0]["versionHistorial"]) != int(self.versionHistorial):
+                self.versionFila = cambios["versionFila"]
+            if int(cambios["versionHistorial"]) != int(self.versionHistorial):
                 self.CrearHistorial()
-                self.versionHistorial = cambios[0]["versionHistorial"]
-            self.versionCambios = cambios[0]["versionCambios"]
+                self.versionHistorial = cambios["versionHistorial"]
+            self.versionCambios = cambios["versionCambios"]
         self.correrGETs.start(1000)
 
     def Buscador(self):              # Actualizar el buscador cuando se cambia los paises en un foro

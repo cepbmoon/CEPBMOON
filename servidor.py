@@ -43,6 +43,7 @@ class conectarMesa():
             cursor.execute("SELECT idSesion FROM tabSesiones WHERE nomForo = %s", (params["nomForo"],))
             sesion = cursor.fetchone()["idSesion"]
             cursor.execute("INSERT INTO tabCambios(idSesion, versionCambios, versionFila, versionHistorial) VALUES(%s, 0, 0, 0)", (sesion,))
+            conn.commit()
             return {"idSesion": sesion}
 
 class mainpy():
@@ -82,10 +83,10 @@ class mainpy():
     def verCambios():
         cursor = conn.cursor()
         sesion = request.json["idSesion"]
-        cursor.execute(f"SELECT * FROM tabCambios WHERE idSesion = {sesion};")
-        cambios = cursor.fetchall()
+        cursor.execute("SELECT * FROM tabCambios WHERE idSesion = %s;", (sesion,))
+        cambios = cursor.fetchone()
         cursor.close() 
-        return jsonify(cambios)
+        return cambios
 
     @app.post("/cambios/cambiarFila")
     def cambiarFila():
@@ -125,8 +126,9 @@ class mainpy():
                         INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion
                         WHERE tabFila.idSesion = %s
                         ORDER BY tabFila.idFila""", (sesion,))
+        fila = cursor.fetchall()
         cursor.close()
-        return cursor.fetchall()
+        return jsonify(fila)
 
     @app.post("/limpiarFila")
     def limpiarFila():
@@ -144,15 +146,15 @@ class mainpy():
         nomDelegacion = request.json["nomDelegacion"]
         cursor.execute("""SELECT tabHistorial.turnos FROM tabHistorial 
                         INNER JOIN tabDelegaciones ON tabHistorial.idDelegacion = tabDelegaciones.idDelegacion 
-                        WHERE tabDelegaciones.nomDelegacion = '{nomDelegacion}';""", (nomDelegacion,))
+                        WHERE tabDelegaciones.nomDelegacion = %s;""", (nomDelegacion,))
         turnos = cursor.fetchall()
         try:
             turnos = turnos[0]["turnos"]
         except:
             turnos = 0
-        cursor.execute("""INSERT INTO tabHistorial (idDelegacion, turnos)
-                        SELECT idDelegacion, %s FROM tabDelegaciones 
-                        WHERE tabDelegaciones.nomDelegacion = %s""", (turnos+1, nomDelegacion,))
+        cursor.execute("""INSERT INTO tabHistorial (idDelegacion, turnos, idSesion)
+                        SELECT idDelegacion, %s, %s FROM tabDelegaciones 
+                        WHERE tabDelegaciones.nomDelegacion = %s""", ((turnos+1), sesion, nomDelegacion,))
         conn.commit()
         cursor.close()
         return {"ok": True}
@@ -163,9 +165,10 @@ class mainpy():
         sesion = request.json["idSesion"]
         cursor.execute("""SELECT tabDelegaciones.nomDelegacion, tabHistorial.turnos FROM tabDelegaciones
                     INNER JOIN tabHistorial ON tabDelegaciones.idDelegacion = tabHistorial.idDelegacion 
-                    ORDER BY tabHistorial.idHistorial""")
+                    WHERE tabHistorial.idSesion = %s
+                    ORDER BY tabHistorial.idHistorial""", (sesion,))
         cursor.close()
-        return cursor.fetchall()
+        return jsonify(cursor.fetchall())
 
 if __name__ == "__main__":
     app.run(debug= True)

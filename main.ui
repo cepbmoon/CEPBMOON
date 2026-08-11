@@ -295,12 +295,6 @@ color: rgb(173, 0, 40);</string>
        </property>
        <item>
         <widget class="QWidget" name="Configuraciones_2" native="true">
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>0</height>
-          </size>
-         </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
            <widget class="QLabel" name="label">
@@ -473,7 +467,7 @@ background-color: rgba(255, 255, 255, 0);</string>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_4">
+           <widget class="QPushButton" name="bn_conectarMesa">
             <property name="minimumSize">
              <size>
               <width>0</width>
@@ -947,6 +941,12 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
        </item>
        <item>
         <widget class="QWidget" name="Anotaciones_2" native="true">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>0</height>
+          </size>
+         </property>
          <layout class="QVBoxLayout" name="Anotaciones">
           <item>
            <widget class="QLabel" name="label_11">

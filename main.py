@@ -163,8 +163,7 @@ class CEPBMOON(QMainWindow):
 
     def LimpiarFila(self):
         self.LimpiarLayout(self.scrollLayout)
-        requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": "delete from tabFila",
-                                                                 "idSesion": self.idSesion})
+        requests.post(self.SERVIDOR + "/limpiarFila", json={"idSesion": self.idSesion})
         requests.post(self.SERVIDOR + "/cambios/cambiarFila", json={"idSesion": self.idSesion})
     
     def Gets(self):                  # Revisa todos los cambios y retorna ok true 👌👌
@@ -214,8 +213,7 @@ class CEPBMOON(QMainWindow):
         self.txtBuscador.clear()
 
     def CrearFila(self):             # Actualiza la fila de delegaciones en cola
-        codigo = "SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion ORDER BY tabFila.idFila"
-        fila = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": codigo}).json()
+        fila = requests.get(self.SERVIDOR + "/GETfila_delegaciones", json={"idSesion": self.idSesion}).json()
         self.LimpiarLayout(self.scrollLayout)
         for delegacion in fila:
             btn = QPushButton(delegacion["nomDelegacion"])
@@ -228,16 +226,7 @@ class CEPBMOON(QMainWindow):
                 
     def QuitarPais(self, delegacion):      # Afecta el *Historial*. Quitar un pais de la lista de oradores, registrar y cronometrarlo 
         def Registrar(nomDelegacion):      # Añade el pais al historial
-                turnos = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": f"""SELECT tabHistorial.turnos FROM tabHistorial 
-                                                                                              INNER JOIN tabDelegaciones ON tabHistorial.idDelegacion = tabDelegaciones.idDelegacion 
-                                                                                              WHERE tabDelegaciones.nomDelegacion = '{nomDelegacion}';"""}).json()
-                try:
-                    turnos = turnos[0]["turnos"]
-                except:
-                    turnos = 0
-                requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": """INSERT INTO tabHistorial (idDelegacion, turnos)
-                                                                                      SELECT idDelegacion, %s FROM tabDelegaciones 
-                                                                                      WHERE tabDelegaciones.nomDelegacion = %s""", "params":(turnos+1, nomDelegacion,)})
+                requests.post(self.SERVIDOR + "/POSThistorial_delegaciones", json={"idSesion": self.idSesion, "nomDelegacion":nomDelegacion})
                 requests.post(self.SERVIDOR + "/cambios/cambiarHistorial", json={"idSesion": self.idSesion})
         def Cronometrar(tiempo):     # Inicia el cronómetro para las delegaciones
             def Cronometro(pais):

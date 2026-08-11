@@ -123,8 +123,8 @@ class mainpy():
         sesion = request.json["idSesion"]
         cursor.execute("""SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones
                         INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion
-                        ORDER BY tabFila.idFila
-                        WHERE idSesion = %s""", (sesion,))
+                        WHERE tabFila.idSesion = %s
+                        ORDER BY tabFila.idFila""", (sesion,))
         cursor.close()
         return cursor.fetchall()
 
@@ -137,8 +137,28 @@ class mainpy():
         cursor.close()
         return {"ok": True}
 
-    @app.get("/GEThistorial")
+    @app.post("/POSThistorial_delegaciones")
     def postHistorial():
+        cursor = conn.cursor()
+        sesion = request.json["idSesion"]
+        nomDelegacion = request.json["nomDelegacion"]
+        cursor.execute("""SELECT tabHistorial.turnos FROM tabHistorial 
+                        INNER JOIN tabDelegaciones ON tabHistorial.idDelegacion = tabDelegaciones.idDelegacion 
+                        WHERE tabDelegaciones.nomDelegacion = '{nomDelegacion}';""", (nomDelegacion,))
+        turnos = cursor.fetchall()
+        try:
+            turnos = turnos[0]["turnos"]
+        except:
+            turnos = 0
+        cursor.execute("""INSERT INTO tabHistorial (idDelegacion, turnos)
+                        SELECT idDelegacion, %s FROM tabDelegaciones 
+                        WHERE tabDelegaciones.nomDelegacion = %s""", (turnos+1, nomDelegacion,))
+        conn.commit()
+        cursor.close()
+        return {"ok": True}
+    
+    @app.get("/GEThistorial")
+    def getHistorial():
         cursor = conn.cursor()
         sesion = request.json["idSesion"]
         cursor.execute("""SELECT tabDelegaciones.nomDelegacion, tabHistorial.turnos FROM tabDelegaciones

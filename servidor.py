@@ -112,6 +112,13 @@ class mainpy():
         conn.commit()
         cursor.close()
 
+        print(
+            f"EMITIENDO -> sesión={sesion}, "
+            f"cambios={versionCambios}, "
+            f"fila={versionFila}, "
+            f"historial={versionHistorial}"
+    )
+
         socketio.emit("cambios",{
                 "versionCambios": versionCambios,
                 "versionFila": versionFila,
@@ -134,6 +141,13 @@ class mainpy():
         cursor.execute("UPDATE tabCambios SET versionCambios = %s, versionFila = %s WHERE idSesion = %s""", (versionCambios, versionFila, sesion))
         conn.commit()
         cursor.close()
+
+        print(
+            f"EMITIENDO -> sesión={sesion}, "
+            f"cambios={versionCambios}, "
+            f"fila={versionFila}, "
+            f"historial={versionHistorial}"
+    )
 
         socketio.emit("cambios",{
                 "versionCambios": versionCambios,

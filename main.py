@@ -133,9 +133,9 @@ class CEPBMOON(QMainWindow):
         self.conectarSesion.finished.connect(self.ConectarFunciones)    # Se llaman todas la funciones
         self.conectarSesion.show()
 
-        self.versionCambios = 1
-        self.versionFila = 1
-        self.versionHistorial = 1
+        self.versionCambios = 0
+        self.versionFila = 0
+        self.versionHistorial = 0
 
     def ConectarFunciones(self):    # Conecta los botones principales con sus funciones
         if self.conectarSesion.idSesion:
@@ -164,6 +164,8 @@ class CEPBMOON(QMainWindow):
         self.Configuraciones()
         # self.Cronometro()
         self.Observaciones()
+        self.CrearFila()
+        self.CrearHistorial()
 
     def LimpiarFila(self):
         self.LimpiarLayout(self.scrollLayout)
@@ -171,23 +173,53 @@ class CEPBMOON(QMainWindow):
         requests.post(self.SERVIDOR + "/cambios/cambiarFila", json={"idSesion": self.idSesion})
 
     def ConectarSocket(self):
+
+        print("CONECTANDO SOCKET...")
+
+        # Registrar eventos
         self.sio.on("connect", self.SocketConectado)
+        self.sio.on("disconnect", self.SocketDesconectado)
         self.sio.on("cambios", self.RecibirCambios)
 
         self.sio.connect(self.SERVIDOR)
 
+        print("SOCKET CONNECTED:", self.sio.connected)
+
     def SocketConectado(self):
-        self.sio.emit("unirse_sesion",{"idSesion": self.idSesion})
+
+        print("SOCKET CONECTADO")
+
+        print("UNIÉNDOME A SESIÓN:", self.idSesion)
+
+        self.sio.emit(
+            "unirse_sesion",
+            {
+                "idSesion": self.idSesion
+            }
+        )
+
+    def SocketDesconectado(self):
+        print("SOCKET DESCONECTADO")
 
     def RecibirCambios(self, data):
+        print("🔥 SOCKET RECIBIDO:", data)
         self.cambiosRecibidos.emit(data)
 
     def ProcesarCambios(self, data):
+
+        print("PROCESANDO CAMBIO:", data)
+
         if int(data["versionFila"]) != int(self.versionFila):
+
+            print("CAMBIÓ FILA")
+
             self.CrearFila()
             self.versionFila = data["versionFila"]
 
         if int(data["versionHistorial"]) != int(self.versionHistorial):
+
+            print("CAMBIÓ HISTORIAL")
+
             self.CrearHistorial()
             self.versionHistorial = data["versionHistorial"]
 

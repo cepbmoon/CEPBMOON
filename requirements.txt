@@ -3,3 +3,5 @@ requests
 flask
 gunicorn
 mysql-connector-python
+flask_socketio
+python-socketio[client]

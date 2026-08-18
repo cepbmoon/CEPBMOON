@@ -234,7 +234,7 @@ border-radius: 15px</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1040</width>
+            <width>640</width>
             <height>541</height>
            </rect>
           </property>
@@ -285,7 +285,7 @@ color: rgb(173, 0, 40);</string>
       </property>
       <property name="maximumSize">
        <size>
-        <width>0</width>
+        <width>400</width>
         <height>16777215</height>
        </size>
       </property>
@@ -467,7 +467,7 @@ background-color: rgba(255, 255, 255, 0);</string>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="bn_conectarMesa">
+           <widget class="QPushButton" name="btn_conectarMesa">
             <property name="minimumSize">
              <size>
               <width>0</width>
@@ -689,7 +689,7 @@ QCheckBox {
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>211</width>
+               <width>345</width>
                <height>42</height>
               </rect>
              </property>

@@ -1,5 +1,7 @@
 from flask import *
 import pymysql
+import asyncio
+from flask_socketio import SocketIO, send, emit, join_room, leave_room
 
 conn = pymysql.connect(
     host="cepbmoon-cepb-moon.c.aivencloud.com",
@@ -11,6 +13,7 @@ conn = pymysql.connect(
 )
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 class conectarMesa():
     @app.get("/GETingresarForo")
@@ -43,10 +46,16 @@ class conectarMesa():
             cursor.execute("SELECT idSesion FROM tabSesiones WHERE nomForo = %s", (params["nomForo"],))
             sesion = cursor.fetchone()["idSesion"]
             cursor.execute("INSERT INTO tabCambios(idSesion, versionCambios, versionFila, versionHistorial) VALUES(%s, 0, 0, 0)", (sesion,))
+            cursor.execute("INSERT INTO tabTiempos(idSesion, leer, cuestionar, pensar, contestar) VALUES(%s, 60, 30, 30, 60)", (sesion,))
             conn.commit()
             return {"idSesion": sesion}
 
 class mainpy():
+    @socketio.on("unirse_sesion")
+    def unirse_sesion(data):
+        sesion = data["idSesion"]
+        join_room(str(sesion))
+
     @app.get("/GETpasar_codigo")
     def getPasarCodigo():
         cursor = conn.cursor()
@@ -78,8 +87,8 @@ class mainpy():
         conn.commit()
         cursor.close()
         return {"ok": True}
-
-    @app.get("/cambios/verCambios")
+    
+    @app.get("/cambios/verCambios")                 # Cambios
     def verCambios():
         cursor = conn.cursor()
         sesion = request.json["idSesion"]
@@ -90,23 +99,51 @@ class mainpy():
 
     @app.post("/cambios/cambiarFila")
     def cambiarFila():
-        cursor = conn.cursor()
         sesion = request.json["idSesion"]
-        cursor.execute(f"SELECT * FROM tabCambios WHERE idSesion = {sesion};")
-        versiones = cursor.fetchall()
-        cursor.execute(f"UPDATE tabCambios SET versionCambios = {int(versiones[0]["versionCambios"]) + 1}, versionFila = {int(versiones[0]["versionFila"]) + 1} WHERE idSesion = {sesion};")
+        cursor = conn.cursor()
+        cursor.execute("SELECT versionCambios, versionFila, versionHistorial FROM tabCambios WHERE idSesion = %s", (sesion,))
+        versiones = cursor.fetchone()
+
+        versionCambios = int(versiones["versionCambios"]) + 1
+        versionFila = int(versiones["versionFila"]) + 1
+        versionHistorial = int(versiones["versionHistorial"])
+
+        cursor.execute("UPDATE tabCambios SET versionCambios = %s, versionFila = %s WHERE idSesion = %s""", (versionCambios, versionFila, sesion))
+        conn.commit()
+        cursor.close()
+
+        socketio.emit("cambios",{
+                "versionCambios": versionCambios,
+                "versionFila": versionFila,
+                "versionHistorial": versionHistorial
+            },room=str(sesion))
+
         return {"ok": True}
 
     @app.post("/cambios/cambiarHistorial")
     def cambiarHistorial():
-        cursor = conn.cursor()
         sesion = request.json["idSesion"]
-        cursor.execute(f"SELECT * FROM tabCambios WHERE idSesion = {sesion};")
-        versiones = cursor.fetchall()
-        cursor.execute(f"UPDATE tabCambios SET versionCambios = {int(versiones[0]["versionCambios"]) + 1}, versionHistorial = {int(versiones[0]["versionHistorial"]) + 1} WHERE idSesion = {sesion};")
+        cursor = conn.cursor()
+        cursor.execute("SELECT versionCambios, versionFila, versionHistorial FROM tabCambios WHERE idSesion = %s", (sesion,))
+        versiones = cursor.fetchone()
+
+        versionCambios = int(versiones["versionCambios"]) + 1
+        versionFila = int(versiones["versionFila"]) 
+        versionHistorial = int(versiones["versionHistorial"]) + 1
+
+        cursor.execute("UPDATE tabCambios SET versionCambios = %s, versionFila = %s WHERE idSesion = %s""", (versionCambios, versionFila, sesion))
+        conn.commit()
+        cursor.close()
+
+        socketio.emit("cambios",{
+                "versionCambios": versionCambios,
+                "versionFila": versionFila,
+                "versionHistorial": versionHistorial
+            },room=str(sesion))
+
         return {"ok": True}
 
-    @app.post("/POSTfila_delegaciones")
+    @app.post("/POSTfila_delegaciones")             # Fila de delegaciones
     def postFila():
         cursor = conn.cursor()
         delegacion = request.json["delegacion"]
@@ -139,7 +176,7 @@ class mainpy():
         cursor.close()
         return {"ok": True}
 
-    @app.post("/POSThistorial_delegaciones")
+    @app.post("/POSThistorial_delegaciones")        # Historial de delegaciones
     def postHistorial():
         cursor = conn.cursor()
         sesion = request.json["idSesion"]
@@ -170,5 +207,38 @@ class mainpy():
         cursor.close()
         return jsonify(cursor.fetchall())
 
+    @app.post("/POSTtiempos")
+    def postTiempos():
+        cursor = conn.cursor()
+        columna = request.json["columna"]
+        segundos = request.json["segundos"]
+        sesion = request.json["idSesion"]
+        cursor.execute("UPDATE tabTiempos SET %s = %s WHERE idSesion = %s", (columna, segundos, sesion))
+        conn.commit()
+        return {"ok": True}
+
+    @app.get("/GETtiempos")
+    def getTiempos():
+        cursor = conn.cursor()
+        sesion = request.json["idSesion"]
+        cursor.execute("SELECT leer, cuestionar, pensar, contestar FROM tabTiempos WHERE idSesion = %s", (sesion,))
+        cursor.close()
+        return cursor.fetchall()
+
+    @app.get("/GETobservaciones")
+    def getObservaciones():
+        cursor = conn.cursor()
+        sesion = request.json["idSesion"]
+        cursor.execute("""SELECT tabDelegaciones.nomDelegacion, tabDelegados.nomDelegado, tabPuntaje.descObs, tabPuntaje.puntaje FROM tabPuntaje
+                        INNER JOIN tabDelegados ON tabDelegados.idDelegado = tabPuntaje.idDelegado
+                        INNER JOIN tabDelegaciones ON tabDelegaciones.idDelegacion = tabDelegados.idDelegacion WHERE tabPuntaje.idSesion = %s
+                        ORDER BY nomDelegacion DESC""", (sesion,))
+        observaciones = cursor.fetchall()
+        cursor.close()
+        if observaciones:
+            return observaciones
+        else:
+            return {"ok": True}
+        
 if __name__ == "__main__":
-    app.run(debug= True)
+    socketio.run(app, debug=True)

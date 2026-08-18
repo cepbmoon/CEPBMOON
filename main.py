@@ -5,6 +5,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import requests
 import sys
+import socketio
+from PyQt5.QtCore import pyqtSignal
+
 
 class ConectarForo(QDialog):
     def __init__(self):
@@ -93,32 +96,35 @@ class NombrarMesa(QDialog):
             a0.ignore()
 
 class HistorialObservaciones(QMainWindow):
-    def __init__(self):
+    def __init__(self, idSesion):
         super().__init__()
         self.SERVIDOR = "http://127.0.0.1:5000"  #Va a ser el link a render!!
         loadUi("historialObs.ui", self)
 
+        self.idSesion = idSesion
         self.tabHistorial.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tabHistorial.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tabHistorial.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
 
-        observaciones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo":"""SELECT tabDelegaciones.nomDelegacion, tabDelegados.nomDelegado, tabPuntaje.descObs, tabPuntaje.puntaje FROM tabPuntaje
-                                                                                            INNER JOIN tabDelegados ON tabDelegados.idDelegado = tabPuntaje.idDelegado
-                                                                                            INNER JOIN tabDelegaciones ON tabDelegaciones.idDelegacion = tabDelegados.idDelegacion 
-                                                                                            ORDER BY nomDelegacion DESC"""}).json()
-        for observacion in observaciones:
-            self.tabHistorial.insertRow(0)
-            self.tabHistorial.setItem(0, 0, QTableWidgetItem(observacion["nomDelegacion"]))
-            self.tabHistorial.setItem(0, 1, QTableWidgetItem(observacion["nomDelegado"]))
-            self.tabHistorial.setItem(0, 2, QTableWidgetItem(observacion["descObs"]))
-            self.tabHistorial.setItem(0, 3, QTableWidgetItem(str(observacion["puntaje"])))
-
-##cada sesion tiene que tener también una fila en tabCambios !
+        observaciones = requests.get(self.SERVIDOR + "/GETobservaciones", json={"idSesion": self.idSesion}).json()
+        try:
+            for observacion in observaciones:
+                self.tabHistorial.insertRow(0)
+                self.tabHistorial.setItem(0, 0, QTableWidgetItem(observacion["nomDelegacion"]))
+                self.tabHistorial.setItem(0, 1, QTableWidgetItem(observacion["nomDelegado"]))
+                self.tabHistorial.setItem(0, 2, QTableWidgetItem(observacion["descObs"]))
+                self.tabHistorial.setItem(0, 3, QTableWidgetItem(str(observacion["puntaje"])))
+        except:
+            pass
 
 class CEPBMOON(QMainWindow):
+    cambiosRecibidos = pyqtSignal(dict)
     def __init__(self):
-        self.SERVIDOR = "http://127.0.0.1:5000"  #Va a ser el link a render!!
         super().__init__()
+        self.SERVIDOR = "http://127.0.0.1:5000"
+        self.sio = socketio.Client()
+        self.cambiosRecibidos.connect(self.ProcesarCambios)
+
         loadUi("main.ui", self)
         self.setEnabled(False)
         self.idSesion = 0
@@ -135,9 +141,7 @@ class CEPBMOON(QMainWindow):
         if self.conectarSesion.idSesion:
             self.idSesion = self.conectarSesion.idSesion
             self.setEnabled(True)
-            self.correrGETs = QTimer(self)
-            self.correrGETs.start(500)
-            self.correrGETs.timeout.connect(self.Gets)
+            self.ConectarSocket()
 
         self.btn1.clicked.connect(lambda _, c=self.Configuraciones_2: self.Expandir(c))
         self.btn2.clicked.connect(lambda _, c=self.Anotaciones_2: self.Expandir(c))
@@ -157,7 +161,7 @@ class CEPBMOON(QMainWindow):
         # self.NombrarMesaAlAbrir()                       
         # self.PaisesEnForo()                             
         # self.DelegacionesEnForo(self.Delegados)
-        # self.Configuraciones()
+        self.Configuraciones()
         # self.Cronometro()
         self.Observaciones()
 
@@ -165,18 +169,29 @@ class CEPBMOON(QMainWindow):
         self.LimpiarLayout(self.scrollLayout)
         requests.post(self.SERVIDOR + "/limpiarFila", json={"idSesion": self.idSesion})
         requests.post(self.SERVIDOR + "/cambios/cambiarFila", json={"idSesion": self.idSesion})
-    
-    def Gets(self):                  # Revisa todos los cambios y retorna ok true 👌👌
-        cambios = requests.get(self.SERVIDOR + "/cambios/verCambios", json={"idSesion": self.idSesion}).json()
-        if int(cambios["versionCambios"]) != int(self.versionCambios):
-            if int(cambios["versionFila"]) != int(self.versionFila):
-                self.CrearFila()
-                self.versionFila = cambios["versionFila"]
-            if int(cambios["versionHistorial"]) != int(self.versionHistorial):
-                self.CrearHistorial()
-                self.versionHistorial = cambios["versionHistorial"]
-            self.versionCambios = cambios["versionCambios"]
-        self.correrGETs.start(1000)
+
+    def ConectarSocket(self):
+        self.sio.on("connect", self.SocketConectado)
+        self.sio.on("cambios", self.RecibirCambios)
+
+        self.sio.connect(self.SERVIDOR)
+
+    def SocketConectado(self):
+        self.sio.emit("unirse_sesion",{"idSesion": self.idSesion})
+
+    def RecibirCambios(self, data):
+        self.cambiosRecibidos.emit(data)
+
+    def ProcesarCambios(self, data):
+        if int(data["versionFila"]) != int(self.versionFila):
+            self.CrearFila()
+            self.versionFila = data["versionFila"]
+
+        if int(data["versionHistorial"]) != int(self.versionHistorial):
+            self.CrearHistorial()
+            self.versionHistorial = data["versionHistorial"]
+
+        self.versionCambios = data["versionCambios"]
 
     def Buscador(self):              # Actualizar el buscador cuando se cambia los paises en un foro
         delegaciones = requests.get(self.SERVIDOR + "/GETpasar_codigo", json={"codigo": "SELECT nomDelegacion FROM tabDelegaciones"}).json()
@@ -185,7 +200,7 @@ class CEPBMOON(QMainWindow):
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.txtBuscador.setCompleter(self.completer)
         self.txtDelegacion.setCompleter(self.completer)
- 
+
         self.txtBuscador.returnPressed.connect(self.Buscar)
         self.btnBuscar.clicked.connect(self.Buscar)
 
@@ -277,7 +292,7 @@ class CEPBMOON(QMainWindow):
         self.Contestar.activated.connect(lambda: Cronometrar("pensar"))
         Registrar(nomDelegacion)
 
-    def CrearHistorial(self):        # Crea... el.... hietorial...... PELOTUDO
+    def CrearHistorial(self):        # 
         fila = requests.get(self.SERVIDOR + "/GEThistorial", json={"idSesion": self.idSesion}).json()
         self.listaHistorial.clearContents()
         for delegacion in fila:
@@ -287,17 +302,17 @@ class CEPBMOON(QMainWindow):
 
     def Observaciones(self):         # Agenda las observaciones
         def AbrirHistorial():                   # Abre el historial de observaciones
-            self.verObservaciones = HistorialObservaciones()
+            self.verObservaciones = HistorialObservaciones(self.idSesion)
             self.verObservaciones.show()
 
         def AnotarObservacion(idObs):     # Añade la observación a la base de datos, reinicia el menú
             if self.delegado:
                 params = [idObs, self.txtObservacion.toPlainText(), self.numPuntaje.text(), self.delegado]
                 requests.post(self.SERVIDOR + "/POSTpasar_codigo", json={"codigo": """INSERT INTO tabPuntaje (idDelegado, idObs, descObs, puntaje)
-                                                                                      SELECT idDelegado, %s, %s, %s
-                                                                                      FROM tabDelegados
-                                                                                      WHERE tabDelegados.nomDelegado = %s""",
-                                                                                      "params": params})
+                                                                                        SELECT idDelegado, %s, %s, %s
+                                                                                        FROM tabDelegados
+                                                                                        WHERE tabDelegados.nomDelegado = %s""",
+                                                                                        "params": params})
                 self.delegado=""
                 self.txtDelegacion.setText(self.txtObservacion.setText(""))
                 self.numPuntaje.setValue(0)
@@ -408,8 +423,8 @@ class CEPBMOON(QMainWindow):
                 d = QLineEdit(Delegado if Delegado != "None" else "")
                 d.setStyleSheet('background-color: rgb(230, 230, 230);border-radius: 5px;padding:5px;font: 12pt "Bahnschrift SemiBold"; margin-bottom: 40px;')
                 d.textChanged.connect(lambda texto, idNota=delegado["idDelegado"]: 
-                                      (self.cursor.execute("""UPDATE tabDelegados SET nomDelegado = ? WHERE idDelegado = ?""",(texto, idNota)),
-                                       self.conn.commit()))
+                                        (self.cursor.execute("""UPDATE tabDelegados SET nomDelegado = ? WHERE idDelegado = ?""",(texto, idNota)),
+                                        self.conn.commit()))
                 hLayout.addWidget(d)
 
                 self.conn.commit()
@@ -445,11 +460,8 @@ class CEPBMOON(QMainWindow):
     def Configuraciones(self):       # Permite cambiar los tiempos
         def CambiarTiempo(columna, tiempo):
             segundos = tiempo.hour()*3600 + tiempo.minute()*60 + tiempo.second()
-            self.cursor.execute(f"UPDATE tabTiempos SET {columna} = ?", (segundos,))
-            self.conn.commit()
-
-        self.cursor.execute("SELECT leer, cuestionar, pensar, contestar FROM tabTiempos")
-        tLectura, tCuestionar, tPensar, tContestar = self.cursor.fetchone()
+            requests.post(self.SERVIDOR + "/POSTtiempos", json={"columna": columna, "segundos": segundos, "idSesion": self.idSesion}) 
+        tLectura, tCuestionar, tPensar, tContestar = (requests.get(self.SERVIDOR + "/GETtiempos", json={"idSesion": self.idSesion}).json())[0].values()
 
         self.timeLectura.setTime(self.timeLectura.time().addSecs(tLectura))
         self.timeCuestionar.setTime(self.timeCuestionar.time().addSecs(tCuestionar))
@@ -468,9 +480,9 @@ class CEPBMOON(QMainWindow):
         self.conectarSesion.setModal(True)
         self.btn_conectarMesa.clicked.connect(lambda: self.conectarSesion.show())
 
-        self.nombrarMesa1 = NombrarMesa(1)
-        self.nombrarMesa1.setModal(True)
-        self.btn_nombrarMesa.clicked.connect(lambda: self.nombrarMesa1.show())
+        # self.nombrarMesa1 = NombrarMesa(1)
+        # self.nombrarMesa1.setModal(True)
+        # self.btn_nombrarMesa.clicked.connect(lambda: self.nombrarMesa1.show())
 
     def Expandir(self, nombre):      #Expandir la barra al costado, comprimir las demas barras
         self.sideBar.setMaximumWidth(400)

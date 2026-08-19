@@ -112,19 +112,11 @@ class mainpy():
         conn.commit()
         cursor.close()
 
-        print(
-            f"EMITIENDO -> sesión={sesion}, "
-            f"cambios={versionCambios}, "
-            f"fila={versionFila}, "
-            f"historial={versionHistorial}"
-    )
-
         socketio.emit("cambios",{
                 "versionCambios": versionCambios,
                 "versionFila": versionFila,
                 "versionHistorial": versionHistorial
             },room=str(sesion))
-
         return {"ok": True}
 
     @app.post("/cambios/cambiarHistorial")
@@ -235,9 +227,12 @@ class mainpy():
     def getTiempos():
         cursor = conn.cursor()
         sesion = request.json["idSesion"]
+        print("Sesion:", sesion)
         cursor.execute("SELECT leer, cuestionar, pensar, contestar FROM tabTiempos WHERE idSesion = %s", (sesion,))
+        tiempos = cursor.fetchone()
         cursor.close()
-        return cursor.fetchall()
+        print("Tiempos: ",tiempos)
+        return tiempos 
 
     @app.get("/GETobservaciones")
     def getObservaciones():

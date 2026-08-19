@@ -128,6 +128,7 @@ class CEPBMOON(QMainWindow):
         loadUi("main.ui", self)
         self.setEnabled(False)
         self.idSesion = 0
+
         self.conectarSesion = ConectarForo()
         self.conectarSesion.setModal(True)
         self.conectarSesion.finished.connect(self.ConectarFunciones)    # Se llaman todas la funciones
@@ -138,11 +139,6 @@ class CEPBMOON(QMainWindow):
         self.versionHistorial = 0
 
     def ConectarFunciones(self):    # Conecta los botones principales con sus funciones
-        if self.conectarSesion.idSesion:
-            self.idSesion = self.conectarSesion.idSesion
-            self.setEnabled(True)
-            self.ConectarSocket()
-
         self.btn1.clicked.connect(lambda _, c=self.Configuraciones_2: self.Expandir(c))
         self.btn2.clicked.connect(lambda _, c=self.Anotaciones_2: self.Expandir(c))
         self.btn3.clicked.connect(lambda _, c=self.Cronometro_2: self.Expandir(c))
@@ -156,6 +152,15 @@ class CEPBMOON(QMainWindow):
         self.btnLimpiar.clicked.connect(self.LimpiarFila)
         self.listaForo.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.listaHistorial.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)   
+        
+        if self.conectarSesion.idSesion:
+            self.idSesion = self.conectarSesion.idSesion
+            self.setEnabled(True)
+
+            self.CrearFila()
+            self.CrearHistorial()
+
+            self.ConectarSocket()
 
         self.Buscador()                                 
         # self.NombrarMesaAlAbrir()                       
@@ -164,8 +169,6 @@ class CEPBMOON(QMainWindow):
         self.Configuraciones()
         # self.Cronometro()
         self.Observaciones()
-        self.CrearFila()
-        self.CrearHistorial()
 
     def LimpiarFila(self):
         self.LimpiarLayout(self.scrollLayout)
@@ -199,30 +202,19 @@ class CEPBMOON(QMainWindow):
         )
 
     def SocketDesconectado(self):
-        print("SOCKET DESCONECTADO")
+        pass
 
     def RecibirCambios(self, data):
-        print("🔥 SOCKET RECIBIDO:", data)
         self.cambiosRecibidos.emit(data)
 
     def ProcesarCambios(self, data):
-
-        print("PROCESANDO CAMBIO:", data)
-
         if int(data["versionFila"]) != int(self.versionFila):
-
-            print("CAMBIÓ FILA")
-
             self.CrearFila()
             self.versionFila = data["versionFila"]
 
         if int(data["versionHistorial"]) != int(self.versionHistorial):
-
-            print("CAMBIÓ HISTORIAL")
-
             self.CrearHistorial()
             self.versionHistorial = data["versionHistorial"]
-
         self.versionCambios = data["versionCambios"]
 
     def Buscador(self):              # Actualizar el buscador cuando se cambia los paises en un foro
@@ -254,8 +246,8 @@ class CEPBMOON(QMainWindow):
             if isinstance(widget, QPushButton) and widget.text() == delegacion:
                 self.txtBuscador.clear()
                 return
+            
         requests.post(self.SERVIDOR + "/POSTfila_delegaciones", json={"delegacion": delegacion, "idSesion": self.idSesion})
-
         requests.post(self.SERVIDOR + "/cambios/cambiarFila", json={"idSesion": self.idSesion})
         self.txtBuscador.clear()
 
@@ -493,7 +485,7 @@ class CEPBMOON(QMainWindow):
         def CambiarTiempo(columna, tiempo):
             segundos = tiempo.hour()*3600 + tiempo.minute()*60 + tiempo.second()
             requests.post(self.SERVIDOR + "/POSTtiempos", json={"columna": columna, "segundos": segundos, "idSesion": self.idSesion}) 
-        tLectura, tCuestionar, tPensar, tContestar = (requests.get(self.SERVIDOR + "/GETtiempos", json={"idSesion": self.idSesion}).json())[0].values()
+        tLectura, tCuestionar, tPensar, tContestar = (requests.get(self.SERVIDOR + "/GETtiempos", json={"idSesion": self.idSesion}).json()).values()
 
         self.timeLectura.setTime(self.timeLectura.time().addSecs(tLectura))
         self.timeCuestionar.setTime(self.timeCuestionar.time().addSecs(tCuestionar))

@@ -47,8 +47,29 @@ class conectarMesa():
             sesion = cursor.fetchone()["idSesion"]
             cursor.execute("INSERT INTO tabCambios(idSesion, versionCambios, versionFila, versionHistorial) VALUES(%s, 0, 0, 0)", (sesion,))
             cursor.execute("INSERT INTO tabTiempos(idSesion, leer, cuestionar, pensar, contestar) VALUES(%s, 60, 30, 30, 60)", (sesion,))
+            cursor.execute("INSERT INTO tabMesa(idSesion) VALUES(%s)", (sesion,))
             conn.commit()
             return {"idSesion": sesion}
+
+class nombrarMesa():
+    @app.get("/GETmesa")
+    def getMesa():
+        cursor = conn.cursor()
+        params = request.json["idSesion"]
+        cursor.execute("SELECT * FROM tabMesa WHERE idSesion = %s", (params))
+        mesa = cursor.fetchone()
+        cursor.close()
+        return mesa
+
+    @app.post("/POSTmesa")
+    def postMesa():
+        cursor = conn.cursor()
+        presidente, moderador, secretario, evaluador, ano = request.json["params"]
+        sesion = request.json["idSesion"]
+        cursor.execute(f"UPDATE tabMesa SET Presidente= %s, Moderador= %s, Secretario= %s, Evaluador= %s, Año = %s WHERE idSesion = %s", (presidente, moderador, secretario, evaluador, ano, sesion,))
+        conn.commit()
+        return {"ok": True}
+
 
 class mainpy():
     @socketio.on("unirse_sesion")
@@ -56,51 +77,33 @@ class mainpy():
         sesion = data["idSesion"]
         join_room(str(sesion))
 
-    @app.get("/GETpasar_codigo")
-    def getPasarCodigo():
+    @app.get("/GETdelegaciones")
+    def getDelegaciones():
         cursor = conn.cursor()
-        codigo = request.json["codigo"]
-        try:
-            params = request.json["params"]
-        except:
-            params = 0
-        if params:
-            cursor.execute(codigo, tuple(params))
-        else:
-            cursor.execute(codigo)
-        respuesta = cursor.fetchall()
+        cursor.execute("SELECT nomDelegacion FROM tabDelegaciones")
+        delegaciones = cursor.fetchall()
         cursor.close()
-        return jsonify(respuesta)
+        return delegaciones
 
-    @app.post("/POSTpasar_codigo")
-    def postPasarCodigo():
+    @app.get("/GETidDelegacion")
+    def getidDelegacion():
         cursor = conn.cursor()
-        codigo = request.json["codigo"]
-        try:
-            params = request.json["params"]
-        except:
-            params = 0
-        if params:
-            cursor.execute(codigo, tuple(params))
-        else:
-            cursor.execute(codigo)
-        conn.commit()
+        delegacion = request.json["delegacion"]
+        print(delegacion)
+        cursor.execute("SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion = %s", (delegacion))
+        idDelegacion = cursor.fetchall()
+        print(idDelegacion)
         cursor.close()
-        return {"ok": True}
-    
-    @app.get("/cambios/verCambios")                 # Cambios
-    def verCambios():
-        cursor = conn.cursor()
-        sesion = request.json["idSesion"]
-        cursor.execute("SELECT * FROM tabCambios WHERE idSesion = %s;", (sesion,))
-        cambios = cursor.fetchone()
-        cursor.close() 
-        return cambios
+        return idDelegacion
 
-    @app.post("/cambios/cambiarFila")
-    def cambiarFila():
-        sesion = request.json["idSesion"]
+    @socketio.on("cambiarFila")
+    def cambiarFila(data):
+        sesion = data["idSesion"]
         cursor = conn.cursor()
+
+        if "idDelegacion" in data:
+            cursor.execute("delete from tabFila where idDelegacion=%s;", (data["idDelegacion"],))
+
         cursor.execute("SELECT versionCambios, versionFila, versionHistorial FROM tabCambios WHERE idSesion = %s", (sesion,))
         versiones = cursor.fetchone()
 
@@ -110,13 +113,20 @@ class mainpy():
 
         cursor.execute("UPDATE tabCambios SET versionCambios = %s, versionFila = %s WHERE idSesion = %s""", (versionCambios, versionFila, sesion))
         conn.commit()
+
+        cursor.execute("""SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones
+                        INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion
+                        WHERE tabFila.idSesion = %s
+                        ORDER BY tabFila.idFila""", (sesion,))
+        fila = cursor.fetchall()
         cursor.close()
 
         socketio.emit("cambios",{
-                "versionCambios": versionCambios,
-                "versionFila": versionFila,
-                "versionHistorial": versionHistorial
-            },room=str(sesion))
+            "fila": fila,
+            "versionCambios": versionCambios,
+            "versionFila": versionFila,
+            "versionHistorial": versionHistorial
+            }, room=str(sesion))
         return {"ok": True}
 
     @app.post("/cambios/cambiarHistorial")
@@ -130,23 +140,21 @@ class mainpy():
         versionFila = int(versiones["versionFila"]) 
         versionHistorial = int(versiones["versionHistorial"]) + 1
 
-        cursor.execute("UPDATE tabCambios SET versionCambios = %s, versionFila = %s WHERE idSesion = %s""", (versionCambios, versionFila, sesion))
+        cursor.execute("UPDATE tabCambios SET versionCambios = %s, versionHistorial = %s WHERE idSesion = %s""", (versionCambios, versionHistorial, sesion))
+
+        cursor.execute("""SELECT tabDelegaciones.nomDelegacion, tabHistorial.turnos FROM tabDelegaciones
+                    INNER JOIN tabHistorial ON tabDelegaciones.idDelegacion = tabHistorial.idDelegacion 
+                    WHERE tabHistorial.idSesion = %s
+                    ORDER BY tabHistorial.idHistorial""", (sesion,))
+        historial = cursor.fetchall()
         conn.commit()
         cursor.close()
-
-        print(
-            f"EMITIENDO -> sesión={sesion}, "
-            f"cambios={versionCambios}, "
-            f"fila={versionFila}, "
-            f"historial={versionHistorial}"
-    )
-
         socketio.emit("cambios",{
-                "versionCambios": versionCambios,
-                "versionFila": versionFila,
-                "versionHistorial": versionHistorial
-            },room=str(sesion))
-
+                        "historial": historial,
+                        "versionCambios": versionCambios,
+                        "versionFila": versionFila,
+                        "versionHistorial": versionHistorial
+                      },room=str(sesion))
         return {"ok": True}
 
     @app.post("/POSTfila_delegaciones")             # Fila de delegaciones
@@ -192,9 +200,10 @@ class mainpy():
                         WHERE tabDelegaciones.nomDelegacion = %s;""", (nomDelegacion,))
         turnos = cursor.fetchall()
         try:
-            turnos = turnos[0]["turnos"]
+            turnos = turnos[-1]["turnos"]
         except:
             turnos = 0
+
         cursor.execute("""INSERT INTO tabHistorial (idDelegacion, turnos, idSesion)
                         SELECT idDelegacion, %s, %s FROM tabDelegaciones 
                         WHERE tabDelegaciones.nomDelegacion = %s""", ((turnos+1), sesion, nomDelegacion,))
@@ -227,12 +236,25 @@ class mainpy():
     def getTiempos():
         cursor = conn.cursor()
         sesion = request.json["idSesion"]
-        print("Sesion:", sesion)
         cursor.execute("SELECT leer, cuestionar, pensar, contestar FROM tabTiempos WHERE idSesion = %s", (sesion,))
         tiempos = cursor.fetchone()
         cursor.close()
-        print("Tiempos: ",tiempos)
-        return tiempos 
+        return jsonify(tiempos) 
+
+    @app.post("/cronometrarDelegacion")
+    def CronometrarDelegacion(dataCronDele):
+        pass
+
+    @app.post("/POSTobservacion")
+    def postObservacion():
+        cursor = conn.cursor()
+        params = request.json["params"]
+        sesion = request.json["idSesion"]
+        cursor.execute("""INSERT INTO tabPuntaje (idDelegado, idSesion, idObs, descObs, puntaje)
+				            SELECT idDelegado, %s, %s, %s, %s
+				            FROM tabDelegados
+				            WHERE tabDelegados.nomDelegado = %s""", (sesion, params[0], params[1], params[2], params[3]))
+        return {"ok": True}
 
     @app.get("/GETobservaciones")
     def getObservaciones():
@@ -248,6 +270,48 @@ class mainpy():
             return observaciones
         else:
             return {"ok": True}
-        
+
+    @app.post("/POSTdelegados")
+    def postDelegados():
+        cursor = conn.cursor()
+        sesion = request.json["idSesion"]
+        delegacion = request.json["delegacion"]
+        cursor.execute("""UPDATE tabDelegaciones SET idSesion = %s WHERE nomDelegacion = %s""", (sesion, delegacion))
+        conn.commit()
+        cursor.execute("""INSERT INTO tabDelegados
+                            (nomDelegado, idDelegacion, alumnoCEPB, idCursoSeccion)
+                            SELECT NULL, tabDelegaciones.idDelegacion, NULL, NULL
+                            FROM tabDelegaciones
+                            WHERE tabDelegaciones.nomDelegacion = %s
+                            AND NOT EXISTS (
+                                SELECT *
+                                FROM tabDelegados
+                                WHERE tabDelegaciones.idDelegacion = tabDelegados.idDelegacion)
+
+                            UNION ALL
+
+                            SELECT NULL, tabDelegaciones.idDelegacion, NULL, NULL
+                            FROM tabDelegaciones
+                            WHERE tabDelegaciones.nomDelegacion = %s
+                            AND NOT EXISTS (
+                                SELECT *
+                                FROM tabDelegados
+                                WHERE tabDelegados.idDelegacion = tabDelegaciones.idDelegacion);""", (delegacion, ))
+        conn.commit()
+        return {"ok": True}
+
+    @app.get("/GETdelegados")
+    def getDelegados():
+        cursor = conn.cursor()
+        delegacion = request.json["delegacion"]
+        cursor.execute("""SELECT nomDelegado FROM tabDelegados 
+                        INNER JOIN tabDelegaciones 
+                        ON tabDelegados.idDelegacion = tabDelegaciones.idDelegacion 
+                        WHERE tabDelegaciones.nomDelegacion = %s;""", (delegacion,))
+
+        delegados = cursor.fetchall()
+        cursor.close()
+        return delegados
+
 if __name__ == "__main__":
     socketio.run(app, debug=True)

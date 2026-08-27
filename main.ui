@@ -13,11 +13,30 @@
   <property name="windowTitle">
    <string>CEPB MOON</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>logoCuadrado.png</normaloff>logoCuadrado.png</iconset>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(230, 229, 235);</string>
+  </property>
+  <property name="iconSize">
+   <size>
+    <width>24</width>
+    <height>20</height>
+   </size>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item row="0" column="0">
      <widget class="QWidget" name="widget" native="true">
       <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <property name="leftMargin">
@@ -57,9 +76,8 @@
            </property>
            <property name="styleSheet">
             <string notr="true">font: 11pt &quot;Bahnschrift SemiLight&quot;;
-background-color: rgb(200, 200, 200);
+background-color: rgb(186, 182, 209);
 border-radius: 15px;
-border: 1px solid white;
 margin-left: 5px;
 padding-left:5px;</string>
            </property>
@@ -87,12 +105,17 @@ padding-left:5px;</string>
            </property>
            <property name="font">
             <font>
-             <pointsize>14</pointsize>
+             <family>Bahnschrift SemiLight</family>
+             <pointsize>11</pointsize>
+             <weight>50</weight>
+             <italic>false</italic>
+             <bold>false</bold>
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(200, 200, 200);
-border-radius: 15px</string>
+            <string notr="true">background-color: rgb(186, 182, 209);
+border-radius: 15px;
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
            </property>
            <property name="text">
             <string>🔍</string>
@@ -136,8 +159,9 @@ border-radius: 15px</string>
             <string>Cronometro</string>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(200, 200, 200);
-border-radius: 15px</string>
+            <string notr="true">background-color: rgb(186, 182, 209);
+border-radius: 15px;
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
            </property>
            <property name="text">
             <string>⚙️</string>
@@ -162,8 +186,9 @@ border-radius: 15px</string>
             <string>Evaluaciones</string>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(200, 200, 200);
-border-radius: 15px</string>
+            <string notr="true">background-color: rgb(186, 182, 209);
+border-radius: 15px;
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
            </property>
            <property name="text">
             <string>❗</string>
@@ -188,8 +213,9 @@ border-radius: 15px</string>
             <string>Cronometro</string>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(200, 200, 200);
-border-radius: 15px</string>
+            <string notr="true">background-color: rgb(186, 182, 209);
+border-radius: 15px;
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
            </property>
            <property name="text">
             <string>⏱️</string>
@@ -214,8 +240,9 @@ border-radius: 15px</string>
             <string>Historial</string>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(200, 200, 200);
-border-radius: 15px</string>
+            <string notr="true">background-color: rgb(186, 182, 209);
+border-radius: 15px;
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
            </property>
            <property name="text">
             <string>📃</string>
@@ -226,6 +253,9 @@ border-radius: 15px</string>
        </item>
        <item>
         <widget class="QScrollArea" name="scrollArea">
+         <property name="styleSheet">
+          <string notr="true">background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:0, y2:0, stop:0 rgba(220, 218, 226,150), stop:1 rgba(230, 229, 235, 255));</string>
+         </property>
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
@@ -234,43 +264,129 @@ border-radius: 15px</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>640</width>
-            <height>541</height>
+            <width>1040</width>
+            <height>536</height>
            </rect>
           </property>
          </widget>
         </widget>
        </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <property name="leftMargin">
-          <number>20</number>
+       <item alignment="Qt::AlignBottom">
+        <widget class="QWidget" name="" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>48</height>
+          </size>
          </property>
-         <item>
-          <widget class="QLabel" name="txtCronometro">
-           <property name="styleSheet">
-            <string notr="true">font: 63 14pt &quot;Bahnschrift SemiBold&quot;;
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <property name="leftMargin">
+           <number>20</number>
+          </property>
+          <property name="topMargin">
+           <number>19</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="txtCronometro">
+            <property name="maximumSize">
+             <size>
+              <width>400</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">font: 63 14pt &quot;Bahnschrift SemiBold&quot;;
 color: rgb(173, 0, 40);</string>
-           </property>
-           <property name="text">
-            <string>00:00</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnLimpiar">
-           <property name="maximumSize">
-            <size>
-             <width>50</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>🚮</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+            </property>
+            <property name="text">
+             <string>00:00</string>
+            </property>
+           </widget>
+          </item>
+          <item alignment="Qt::AlignLeft">
+           <widget class="QWidget" name="wgt_btns" native="true">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>0</height>
+             </size>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_8">
+             <item>
+              <widget class="QPushButton" name="btnLectura">
+               <property name="minimumSize">
+                <size>
+                 <width>65</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(186, 182, 209);
+border-radius: 15px;
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
+               </property>
+               <property name="text">
+                <string>Lectura</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnCuestionar">
+               <property name="minimumSize">
+                <size>
+                 <width>80</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(186, 182, 209);
+border-radius: 15px;
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
+               </property>
+               <property name="text">
+                <string>Cuestionar</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnContestar">
+               <property name="minimumSize">
+                <size>
+                 <width>75</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(186, 182, 209);
+border-radius: 15px;
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
+               </property>
+               <property name="text">
+                <string>Contestar</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnLimpiar">
+            <property name="maximumSize">
+             <size>
+              <width>50</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>🚮</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -285,7 +401,7 @@ color: rgb(173, 0, 40);</string>
       </property>
       <property name="maximumSize">
        <size>
-        <width>400</width>
+        <width>0</width>
         <height>16777215</height>
        </size>
       </property>
@@ -295,6 +411,12 @@ color: rgb(173, 0, 40);</string>
        </property>
        <item>
         <widget class="QWidget" name="Configuraciones_2" native="true">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>0</height>
+          </size>
+         </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
            <widget class="QLabel" name="label">
@@ -475,7 +597,7 @@ background-color: rgba(255, 255, 255, 0);</string>
              </size>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(200, 200, 200);
+             <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
 font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
             </property>
@@ -493,7 +615,7 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
              </size>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(200, 200, 200);
+             <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
 font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
             </property>
@@ -511,7 +633,7 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
              </size>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(200, 200, 200);
+             <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
 font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
             </property>
@@ -689,7 +811,7 @@ QCheckBox {
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>345</width>
+               <width>211</width>
                <height>42</height>
               </rect>
              </property>
@@ -745,7 +867,8 @@ QCheckBox {
              <enum>Qt::NoFocus</enum>
             </property>
             <property name="styleSheet">
-             <string notr="true">font: 50 15pt &quot;Bahnschrift Light&quot;;</string>
+             <string notr="true">font: 50 15pt &quot;Bahnschrift Light&quot;;
+background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:0, y2:0, stop:0 rgba(220, 218, 226,150), stop:1 rgba(230, 229, 235, 255));</string>
             </property>
             <property name="editTriggers">
              <set>QAbstractItemView::NoEditTriggers</set>
@@ -941,12 +1064,6 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
        </item>
        <item>
         <widget class="QWidget" name="Anotaciones_2" native="true">
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>0</height>
-          </size>
-         </property>
          <layout class="QVBoxLayout" name="Anotaciones">
           <item>
            <widget class="QLabel" name="label_11">
@@ -992,11 +1109,9 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                 </size>
                </property>
                <property name="styleSheet">
-                <string notr="true">font: 11pt &quot;Bahnschrift SemiLight&quot;;
-background-color: #ddd;
+                <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
-margin-left: 5px;
-padding-left:5px;</string>
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                </property>
               </widget>
              </item>
@@ -1040,11 +1155,9 @@ padding-left:5px;</string>
                    </size>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">font: 11pt &quot;Bahnschrift SemiLight&quot;;
-background-color: #ddd;
+                   <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
-margin-left: 5px;
-padding-left:5px;</string>
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                   </property>
                   <property name="text">
                    <string/>
@@ -1060,11 +1173,9 @@ padding-left:5px;</string>
                    </size>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">font: 11pt &quot;Bahnschrift SemiLight&quot;;
-background-color: #ddd;
+                   <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
-margin-left: 5px;
-padding-left:5px;</string>
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                   </property>
                   <property name="text">
                    <string/>
@@ -1087,11 +1198,9 @@ padding-left:5px;</string>
              <item>
               <widget class="QTextEdit" name="txtObservacion">
                <property name="styleSheet">
-                <string notr="true">font: 11pt &quot;Bahnschrift SemiLight&quot;;
-background-color: #ddd;
+                <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
-margin-left: 5px;
-padding-left:5px;</string>
+font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                </property>
               </widget>
              </item>
@@ -1121,7 +1230,7 @@ padding-left:5px;</string>
                </property>
                <property name="styleSheet">
                 <string notr="true">font: 11pt &quot;Bahnschrift SemiLight&quot;;
-background-color: #ddd;
+background-color: rgb(186, 182, 209);
 border-radius: 15px;
 margin-left: 5px;
 margin-bottom: 9px;
@@ -1159,7 +1268,7 @@ padding-left:5px;</string>
                 <bool>false</bool>
                </property>
                <property name="styleSheet">
-                <string notr="true">background-color: rgb(200, 200, 200);
+                <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
 font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                </property>
@@ -1177,7 +1286,7 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                 </size>
                </property>
                <property name="styleSheet">
-                <string notr="true">background-color: rgb(200, 200, 200);
+                <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
 font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                </property>
@@ -1207,7 +1316,7 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
           </size>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(200, 200, 200);
+          <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
 font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
          </property>

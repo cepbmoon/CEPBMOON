@@ -1,16 +1,18 @@
 from flask import *
 import pymysql
+from pymysqlpool.pool import Pool
 import asyncio
 from flask_socketio import SocketIO, send, emit, join_room, leave_room
 
-conn = pymysql.connect(
-    host="cepbmoon-cepb-moon.c.aivencloud.com",
+pool = Pool(host="cepbmoon-cepb-moon.c.aivencloud.com",
     port=27526,
     user="avnadmin",
     password="AVNS_tHX9YWtgYm64fJwHvSo",
     database="db_CEPBMOON",
-    cursorclass=pymysql.cursors.DictCursor
-)
+    cursorclass=pymysql.cursors.DictCursor,
+    )
+
+conn = pool.get_conn()
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -18,11 +20,13 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 class conectarMesa():
     @app.get("/GETingresarForo")
     def ingresarForo():
-        cursor = conn.cursor()
+        conexion = pool.get_conn()
+        cursor = conexion.cursor()
         params = request.json["params"]
         cursor.execute("SELECT idSesion FROM tabSesiones WHERE nomForo = %s AND contraseña = %s", (params["nomForo"], params["contraseña"])) #Revisa si hay el foro y contraseña
         foro = cursor.fetchone()
         if foro:
+            pool.release(conexion)
             return {"idSesion":foro["idSesion"]}      # Hay todo ouuu yeeeaaaa
         else:
             cursor.execute("SELECT idSesion FROM tabSesiones WHERE nomForo = %s;", (params["nomForo"],))
@@ -89,20 +93,25 @@ class mainpy():
     def getidDelegacion():
         cursor = conn.cursor()
         delegacion = request.json["delegacion"]
-        print(delegacion)
         cursor.execute("SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion = %s", (delegacion))
         idDelegacion = cursor.fetchall()
-        print(idDelegacion)
         cursor.close()
         return idDelegacion
 
     @socketio.on("cambiarFila")
     def cambiarFila(data):
+        print(data)
+        conexion = pool.get_conn()
+        cursor = conexion.cursor()
         sesion = data["idSesion"]
-        cursor = conn.cursor()
 
-        if "idDelegacion" in data:
-            cursor.execute("delete from tabFila where idDelegacion=%s;", (data["idDelegacion"],))
+        if "delegacion" in data:
+            delegacion = data["delegacion"]
+            cursor.execute("SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion = %s", (delegacion))
+            idDelegacion = cursor.fetchall()
+            cursor.close()
+            cursor.execute("delete from tabFila where idDelegacion=%s;", (idDelegacion,))
+            conexion.commit()
 
         cursor.execute("SELECT versionCambios, versionFila, versionHistorial FROM tabCambios WHERE idSesion = %s", (sesion,))
         versiones = cursor.fetchone()
@@ -112,7 +121,7 @@ class mainpy():
         versionHistorial = int(versiones["versionHistorial"])
 
         cursor.execute("UPDATE tabCambios SET versionCambios = %s, versionFila = %s WHERE idSesion = %s""", (versionCambios, versionFila, sesion))
-        conn.commit()
+        conexion.commit()
 
         cursor.execute("""SELECT tabDelegaciones.nomDelegacion FROM tabDelegaciones
                         INNER JOIN tabFila ON tabDelegaciones.idDelegacion = tabFila.idDelegacion
@@ -120,6 +129,7 @@ class mainpy():
                         ORDER BY tabFila.idFila""", (sesion,))
         fila = cursor.fetchall()
         cursor.close()
+        pool.release(conexion)
 
         socketio.emit("cambios",{
             "fila": fila,
@@ -127,12 +137,14 @@ class mainpy():
             "versionFila": versionFila,
             "versionHistorial": versionHistorial
             }, room=str(sesion))
+        
         return {"ok": True}
 
     @app.post("/cambios/cambiarHistorial")
     def cambiarHistorial():
+        conexion = pool.get_conn()
+        cursor = conexion.cursor()
         sesion = request.json["idSesion"]
-        cursor = conn.cursor()
         cursor.execute("SELECT versionCambios, versionFila, versionHistorial FROM tabCambios WHERE idSesion = %s", (sesion,))
         versiones = cursor.fetchone()
 
@@ -149,6 +161,7 @@ class mainpy():
         historial = cursor.fetchall()
         conn.commit()
         cursor.close()
+        pool.release(conexion)
         socketio.emit("cambios",{
                         "historial": historial,
                         "versionCambios": versionCambios,
@@ -157,16 +170,18 @@ class mainpy():
                       },room=str(sesion))
         return {"ok": True}
 
-    @app.post("/POSTfila_delegaciones")             # Fila de delegaciones
-    def postFila():
-        cursor = conn.cursor()
-        delegacion = request.json["delegacion"]
-        sesion = request.json["idSesion"]
+    @socketio.on("POSTfila_delegaciones")             # Fila de delegaciones
+    def postFila(data):
+        conexion = pool.get_conn()
+        cursor = conexion.cursor()
+        delegacion = data["delegacion"]
+        sesion = data["idSesion"]
         cursor.execute("SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion=%s",(delegacion,))
         cursor.execute("INSERT INTO tabFila(idDelegacion, idSesion) VALUES(%s, %s)",(cursor.fetchone()["idDelegacion"], sesion,))
-        conn.commit()
-
+        conexion.commit()
         cursor.close()
+        
+        pool.release(conexion)
         return {"ok": True}
 
     @app.get("/GETfila_delegaciones")
@@ -192,23 +207,25 @@ class mainpy():
 
     @app.post("/POSThistorial_delegaciones")        # Historial de delegaciones
     def postHistorial():
-        cursor = conn.cursor()
+        conexion = pool.get_conn()
+        cursor = conexion.cursor()
         sesion = request.json["idSesion"]
         nomDelegacion = request.json["nomDelegacion"]
         cursor.execute("""SELECT tabHistorial.turnos FROM tabHistorial 
                         INNER JOIN tabDelegaciones ON tabHistorial.idDelegacion = tabDelegaciones.idDelegacion 
                         WHERE tabDelegaciones.nomDelegacion = %s;""", (nomDelegacion,))
         turnos = cursor.fetchall()
-        try:
+        if turnos:
             turnos = turnos[-1]["turnos"]
-        except:
+        else:
             turnos = 0
 
         cursor.execute("""INSERT INTO tabHistorial (idDelegacion, turnos, idSesion)
                         SELECT idDelegacion, %s, %s FROM tabDelegaciones 
                         WHERE tabDelegaciones.nomDelegacion = %s""", ((turnos+1), sesion, nomDelegacion,))
-        conn.commit()
+        conexion.commit()
         cursor.close()
+        pool.release(conexion)
         return {"ok": True}
     
     @app.get("/GEThistorial")

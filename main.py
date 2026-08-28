@@ -247,7 +247,7 @@ class CEPBMOON(QMainWindow):
                 self.txtBuscador.clear()
                 return
             
-        requests.post(self.SERVIDOR + "/POSTfila_delegaciones", json={"delegacion": delegacion, "idSesion": self.idSesion})
+        self.sio.emit("POSTfila_delegaciones", {"delegacion": delegacion, "idSesion": self.idSesion})
         self.sio.emit("cambiarFila",{"idSesion": self.idSesion})
         self.txtBuscador.clear()
 
@@ -303,9 +303,7 @@ class CEPBMOON(QMainWindow):
 
         nomDelegacion = delegacion.nomDelegacion.text()
         delegacion.deleteLater()
-
-        id = requests.get(self.SERVIDOR + "/GETidDelegacion", json={"delegacion": nomDelegacion}).json()
-        self.sio.emit("cambiarFila",{"idSesion": self.idSesion, "idDelegacion": id[0]['idDelegacion']})
+        self.sio.emit("cambiarFila",{"idSesion": self.idSesion, "delegacion": nomDelegacion})
 
         self.txtCronometro.setText(str(nomDelegacion))
         self.wgt_btns.setMaximumHeight(48)

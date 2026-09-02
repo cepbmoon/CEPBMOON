@@ -264,15 +264,15 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1040</width>
-            <height>536</height>
+            <width>640</width>
+            <height>533</height>
            </rect>
           </property>
          </widget>
         </widget>
        </item>
        <item alignment="Qt::AlignBottom">
-        <widget class="QWidget" name="" native="true">
+        <widget class="QWidget" name="widget" native="true">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -401,7 +401,7 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
       </property>
       <property name="maximumSize">
        <size>
-        <width>0</width>
+        <width>400</width>
         <height>16777215</height>
        </size>
       </property>
@@ -411,12 +411,6 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
        </property>
        <item>
         <widget class="QWidget" name="Configuraciones_2" native="true">
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>0</height>
-          </size>
-         </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
            <widget class="QLabel" name="label">
@@ -811,7 +805,7 @@ QCheckBox {
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>211</width>
+               <width>345</width>
                <height>42</height>
               </rect>
              </property>
@@ -1064,6 +1058,12 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
        </item>
        <item>
         <widget class="QWidget" name="Anotaciones_2" native="true">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>0</height>
+          </size>
+         </property>
          <layout class="QVBoxLayout" name="Anotaciones">
           <item>
            <widget class="QLabel" name="label_11">
@@ -1111,7 +1111,11 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                <property name="styleSheet">
                 <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
-font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
+font: 11pt &quot;Bahnschrift SemiLight&quot;;
+padding-left: 5px;</string>
+               </property>
+               <property name="text">
+                <string/>
                </property>
               </widget>
              </item>
@@ -1200,7 +1204,8 @@ font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
                <property name="styleSheet">
                 <string notr="true">background-color: rgb(186, 182, 209);
 border-radius: 15px;
-font: 11pt &quot;Bahnschrift SemiLight&quot;;</string>
+font: 11pt &quot;Bahnschrift SemiLight&quot;;
+padding-left: 5px; </string>
                </property>
               </widget>
              </item>

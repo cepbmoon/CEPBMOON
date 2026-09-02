@@ -1,4 +1,4 @@
-#import servidor as s
+print("\33c")
 from PyQt5.QtWidgets  import *
 from PyQt5.uic import *
 from PyQt5.QtCore import *
@@ -179,7 +179,7 @@ class CEPBMOON(QMainWindow):
 
         self.Buscador()                                 
         self.NombrarMesaAlAbrir()                       
-        # self.PaisesEnForo()                             
+        self.DelegacionesEnForo()                             
         # self.DelegacionesEnForo(self.Delegados)
         self.Configuraciones()
         # self.Cronometro()
@@ -208,11 +208,11 @@ class CEPBMOON(QMainWindow):
 
     def ProcesarCambios(self, data):
         if int(data["versionCambios"]) != int(self.versionCambios):
-            if "fila" in data and int(data["versionFila"]) != int(self.versionFila):
+            if 'fila' in data      and int(data["versionFila"])      != int(self.versionFila):
                 self.CrearFila(data["fila"])
                 self.versionFila = data["versionFila"]
 
-            if "historial" in data and int(data["versionHistorial"]) != int(self.versionHistorial):
+            if 'historial' in data and int(data["versionHistorial"]) != int(self.versionHistorial):
                 self.CrearHistorial(data["historial"])
                 self.versionHistorial = data["versionHistorial"]
 
@@ -272,7 +272,7 @@ class CEPBMOON(QMainWindow):
         
         def Registrar(nomDelegacion):      # Añade el pais al historial
                 requests.post(self.SERVIDOR + "/POSThistorial_delegaciones", json={"idSesion": self.idSesion, "nomDelegacion":nomDelegacion})
-                requests.post(self.SERVIDOR + "/cambios/cambiarHistorial", json={"idSesion": self.idSesion})
+                self.sio.emit("cambiarHistorial",{"idSesion": self.idSesion})
         def Cronometrar(tiempo):     # Inicia el cronómetro para las delegaciones
             def Cronometro(pais):
                 if self.time == QTime(0, 0, 0):
@@ -334,9 +334,11 @@ class CEPBMOON(QMainWindow):
                 self.txtDelegacion.setText(self.txtObservacion.setText(""))
                 self.numPuntaje.setValue(0)
         def ElegirDelegado(delegacion):               # Selecciona bajo que delegado se guardará la observación
-            colores = ["font: 11pt 'Bahnschrift SemiLight'; background-color: #bbb; border-radius: 15px; margin-left: 5px; padding-left:5px;", "font: 11pt 'Bahnschrift SemiLight'; background-color: #ddd; border-radius: 15px; margin-left: 5px; padding-left:5px;"]
+            colores = ["background-color: rgb(156, 152, 181);border-radius: 15px;font: 11pt 'Bahnschrift SemiLight';", "background-color: rgb(186, 182, 209);border-radius: 15px;font: 11pt 'Bahnschrift SemiLight'"]
             try:
-                delegados = requests.get(self.SERVIDOR + "/GETdelegados", json={"delegacion": [delegacion]}).json()
+                delegadosTotal = requests.get(self.SERVIDOR + "/GETdelegados").json()
+                delegados = [d for d in delegadosTotal if d.get("nomDelegacion") == delegacion]
+
                 self.btnD1.setText((str(delegados[0]["nomDelegado"])) if delegados[0]["nomDelegado"] != None else "")
                 self.btnD2.setText((str(delegados[1]["nomDelegado"])) if delegados[1]["nomDelegado"] != None else "")
 
@@ -367,24 +369,25 @@ class CEPBMOON(QMainWindow):
         self.txtDelegacion.textChanged.connect(lambda: ElegirDelegado(self.txtDelegacion.text()))
         self.btnHistorialObservaciones.clicked.connect(lambda: AbrirHistorial())
 
-    def PaisesEnForo(self):          # Actualizar que paises se cargarán, cargar la lista y checkboxes para seleccionar o no las delegaciones
-        def PaisEnForo(state, delegacion): # Pone que una delegacion esté en el foro
+    def DelegacionesEnForo(self):          # Actualizar que delegaciones se cargarán, cargar la lista y checkboxes para seleccionar o no las delegaciones
+        delegacionesTot = requests.get(self.SERVIDOR + "/GETdelegaciones").json()
+        delegaciones = [(d["nomDelegacion"], d["idSesion"]) for d in delegacionesTot]
+        def DelegacionEnForo(state, delegacion): # Pone que una delegacion esté en el foro
             requests.post(self.SERVIDOR + "/POSTdelegados", json={"idSesion": self.idSesion if state else 0, "delegacion": delegacion})
             self.Buscador()
 
-        def BuscarPais(n):          # Este actualiza el buscador de paises en la fila principal
+        def BuscarPais(n):          # Este actualiza el buscador de delegaciones en la fila principal
             self.listaForo.setRowCount(0)
-            self.cursor.execute("""SELECT * FROM tabDelegaciones WHERE nomDelegacion LIKE %s""", (f"{n}%",))          #load bearing porcentaje
-            for fila in self.cursor.fetchall():
-                delegacion = fila["nomDelegacion"]
+            deles = [(d["nomDelegacion"], d["idSesion"]) for d in delegacionesTot if d["nomDelegacion"].lower().startswith(n.lower())]
+            for nombre, id_sesion in deles:
                 btn_delegacionEnForo = QCheckBox()
-                btn_delegacionEnForo.setChecked(fila["idSesion"]==self.idSesion)
-                btn_delegacionEnForo.stateChanged.connect(lambda state, d=delegacion: PaisEnForo(state, d))
+                btn_delegacionEnForo.setChecked(id_sesion ==self.idSesion)
+                btn_delegacionEnForo.stateChanged.connect(lambda state, d=nombre: DelegacionEnForo(state, d))
                 btn_delegacionEnForo.setLayoutDirection(Qt.RightToLeft)
 
                 row_position = self.listaForo.rowCount()
                 self.listaForo.insertRow(row_position)
-                self.listaForo.setItem(row_position,0,QTableWidgetItem(fila["nomDelegacion"]))
+                self.listaForo.setItem(row_position,0,QTableWidgetItem(nombre))
                 self.listaForo.setCellWidget(row_position,1,btn_delegacionEnForo)
         BuscarPais("")
 
@@ -396,32 +399,31 @@ class CEPBMOON(QMainWindow):
                 if item.widget():
                     item.widget().deleteLater()
                 elif item.layout():
-                    self.DelegacionesEnForo(item.layout())
+                    self.DelegadosEnForo(item.layout())
 
-    def DelegacionesEnForo(self, layout): # Nombra a los delegados en una delegación
+    def DelegadosEnForo(self, layout): # Nombra a los delegados en una delegación
         self.LimpiarLayout(layout)
-        self.cursor.execute("""SELECT idDelegacion, nomDelegacion FROM tabDelegaciones WHERE enforo = 2""")
-        paisesEnForo=self.cursor.fetchall()
+        delegacionesTot = requests.get(self.SERVIDOR + "/GETdelegaciones").json()
+        delegadosTot = requests.get(self.SERVIDOR + "/GETdelegados").json()
+        delegacionesEnForo = [{"nomDelegacion":d["nomDelegacion"], "idSesion":d["idSesion"], "idDelegacion":d["idDelegacion"]} for d in delegacionesTot if d["idSesion"] == self.idSesion]
         hLayout = QHBoxLayout()
 
-        for delegacion in paisesEnForo:
-            nomPais = QLabel(str(delegacion["nomDelegacion"]))
-            nomPais.setStyleSheet('font: 12pt "Bahnschrift SemiBold"; text-align: center;')
-            nomPais.setAlignment(Qt.AlignCenter)
+        for delegacion in delegacionesEnForo:
+            nomDelegacion = QLabel(str(delegacion["nomDelegacion"]))
+            nomDelegacion.setStyleSheet('font: 12pt "Bahnschrift SemiBold"; text-align: center;')
+            nomDelegacion.setAlignment(Qt.AlignCenter)
             
-            self.cursor.execute("""SELECT * FROM tabDelegados WHERE idDelegacion = ?""", (int(delegacion["idDelegacion"]),))
+            delegados = [{"nomDelegado": ds["nomDelegado"], "idDelegado": ds["idDelegado"]} for ds in delegadosTot if ds["idDelegacion"] == delegacion["idDelegacion"]]
             hLayout = QHBoxLayout()
-            for delegado in self.cursor.fetchall():
+            for delegado in delegados:
                 Delegado = str(delegado["nomDelegado"])
-                d = QLineEdit(Delegado if Delegado != "None" else "")
-                d.setStyleSheet('background-color: rgb(230, 230, 230);border-radius: 5px;padding:5px;font: 12pt "Bahnschrift SemiBold"; margin-bottom: 40px;')
-                d.textChanged.connect(lambda texto, idNota=delegado["idDelegado"]: 
-                                        (self.cursor.execute("""UPDATE tabDelegados SET nomDelegado = ? WHERE idDelegado = ?""",(texto, idNota)),
-                                        self.conn.commit()))
-                hLayout.addWidget(d)
-
-                self.conn.commit()
-            layout.layout().addWidget(nomPais)
+                dls = QLineEdit(Delegado if Delegado != "None" else "")
+                dls.setStyleSheet('background-color: rgb(186, 182, 209);border-radius: 5px;padding:5px;font: 12pt "Bahnschrift SemiBold"; margin-bottom: 40px;')
+                dls.textChanged.connect(lambda texto, id_del=delegado["idDelegado"]: 
+                        self.sio.emit("POSTnomDelegados", {"nombre": texto, "idDelegado": id_del}))
+                hLayout.addWidget(dls)
+            
+            layout.layout().addWidget(nomDelegacion)
             layout.layout().addLayout(hLayout)   
             layout.layout().addStretch()
 
@@ -467,7 +469,7 @@ class CEPBMOON(QMainWindow):
         self.timeContestar.timeChanged.connect(lambda t: CambiarTiempo("contestar", t))
 
         self.btn_verPaises.clicked.connect(lambda _, c=self.listaPaises_2: self.Expandir(c))
-        self.btn_nombrarPaises.clicked.connect(lambda _, c=self.Delegados_3: (self.Expandir(c), self.DelegacionesEnForo(self.Delegados)))
+        self.btn_nombrarPaises.clicked.connect(lambda _, c=self.Delegados_3: (self.Expandir(c), self.DelegadosEnForo(self.Delegados)))
 
         self.conectarSesion = ConectarForo()
         self.conectarSesion.setModal(True)

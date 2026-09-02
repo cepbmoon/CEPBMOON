@@ -4,5 +4,5 @@ flask
 gunicorn
 mysql-connector-python
 flask_socketio
-pymysql-pooling
+pymysql-pool
 python-socketio[client]

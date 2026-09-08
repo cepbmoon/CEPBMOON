@@ -23,6 +23,10 @@ conn = pool.get_connection()
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+@app.route("/")
+def inicio():
+    return "Servidor CEPBMOON funcionando correctamente"
+
 class conectarMesa():
     @app.get("/GETingresarForo")
     def ingresarForo():

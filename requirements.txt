@@ -7,3 +7,5 @@ flask_socketio
 pymysql-pool
 python-socketio[client]
 dotenv
+gevent
+gevent-websocket

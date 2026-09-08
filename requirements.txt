@@ -6,3 +6,4 @@ mysql-connector-python
 flask_socketio
 pymysql-pool
 python-socketio[client]
+dotenv

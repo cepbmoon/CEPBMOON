@@ -1,16 +1,19 @@
 print("\33c")
-from flask import *
+import os
 import pymysql
+from flask import *
+from dotenv import load_dotenv
 from pymysqlpool import ConnectionPool
-import asyncio
 from flask_socketio import SocketIO, send, emit, join_room, leave_room
 
-config = {"host":"cepbmoon-cepb-moon.c.aivencloud.com",
-    "port":27526,
-    "user":"avnadmin",
-    "password":"AVNS_tHX9YWtgYm64fJwHvSo",
-    "database":"db_CEPBMOON",
-    "cursorclass":pymysql.cursors.DictCursor
+load_dotenv()
+
+config = {'port': int(os.getenv('DB_PORT', 3306)),
+        'user': os.getenv('DB_USER'),
+        'password': os.getenv('DB_PASSWORD'),  # Your password is now safe
+        'host': os.getenv('DB_HOST'),
+        'database': os.getenv('DB_NAME'),
+         "cursorclass":pymysql.cursors.DictCursor
     }
 
 pool = ConnectionPool(size=10, maxsize=20, **config)
@@ -86,12 +89,18 @@ class mainpy():
 
     @app.get("/GETdelegaciones")
     def getDelegaciones():
-        with pool.get_connection() as conn:
-            with conn.cursor() as cursor:
+        connexion_GETdelegaciones = pool.get_connection()
+        try:
+            cursor = connexion_GETdelegaciones.cursor()
+            try:
+                sesion = request.json["idSesion"]
+                cursor.execute("SELECT * FROM tabDelegaciones WHERE idSesion = %s", (sesion,))
+            except:
                 cursor.execute("SELECT * FROM tabDelegaciones")
-                delegaciones = cursor.fetchall()
-                cursor.close()
-                return delegaciones
+            delegaciones = cursor.fetchall()
+            return delegaciones
+        finally:
+            connexion_GETdelegaciones.close()
 
     @app.get("/GETidDelegacion")
     def getidDelegacion():
@@ -242,31 +251,47 @@ class mainpy():
                     INNER JOIN tabHistorial ON tabDelegaciones.idDelegacion = tabHistorial.idDelegacion 
                     WHERE tabHistorial.idSesion = %s
                     ORDER BY tabHistorial.idHistorial""", (sesion,))
+        historial = jsonify(cursor.fetchall())
         cursor.close()
-        return jsonify(cursor.fetchall())
+        return historial
 
     @app.post("/POSTtiempos")
     def postTiempos():
-        cursor = conn.cursor()
-        columna = request.json["columna"]
-        segundos = request.json["segundos"]
-        sesion = request.json["idSesion"]
-        cursor.execute("UPDATE tabTiempos SET %s = %s WHERE idSesion = %s", (columna, segundos, sesion))
-        conn.commit()
-        return {"ok": True}
+        conn_POSTtiempos = pool.get_connection()
+        try:
+            cursor = conn.cursor()
+            columna = request.json["columna"]
+            segundos = request.json["segundos"]
+            sesion = request.json["idSesion"]
+            cursor.execute(f"UPDATE tabTiempos SET {columna} = %s WHERE idSesion = %s", (segundos, sesion))
+            conn_POSTtiempos.commit()
+            return {"ok": True}
+        finally:
+            conn_POSTtiempos.close()
 
     @app.get("/GETtiempos")
     def getTiempos():
-        cursor = conn.cursor()
-        sesion = request.json["idSesion"]
-        cursor.execute("SELECT leer, cuestionar, pensar, contestar FROM tabTiempos WHERE idSesion = %s", (sesion,))
-        tiempos = cursor.fetchone()
-        cursor.close()
-        return jsonify(tiempos) 
+        conn_GETtiempos = pool.get_connection()
+        try:
+            cursor = conn_GETtiempos.cursor()
+            sesion = request.json["idSesion"]
+            cursor.execute("SELECT leer, cuestionar, pensar, contestar FROM tabTiempos WHERE idSesion = %s", (sesion,))
+            tiempos = cursor.fetchone()
+            cursor.close()
+            return jsonify(tiempos) 
+        finally:
+            conn_GETtiempos.close()
 
-    @app.post("/cronometrarDelegacion")
-    def CronometrarDelegacion(dataCronDele):
-        pass
+    @socketio.on("conteoDelegacion")
+    def conteoDelegacion(data):
+        print(data)
+        nomDelegacion = data["nomDelegacion"]
+        tiempo = data["tiempo"]
+        sesion = data["idSesion"]
+        socketio.emit("cuenta regresiva",{
+                "delegacion": nomDelegacion,
+                "tiempo": tiempo
+                },room=str(sesion))
 
     @app.post("/POSTobservacion")
     def postObservacion():
@@ -280,6 +305,7 @@ class mainpy():
                                 SELECT idDelegado, %s, %s, %s, %s
                                 FROM tabDelegados
                                 WHERE tabDelegados.nomDelegado = %s""", (sesion, params[0], params[1], params[2], params[3]))
+            conexion_POSTobservacion.commit()
             return {"ok": True}
         finally:
             conexion_POSTobservacion.close()
@@ -339,9 +365,17 @@ class mainpy():
         conexion_GETdelegados = pool.get_connection()
         try:
             cursor = conexion_GETdelegados.cursor()
-            cursor.execute("""SELECT * FROM tabDelegados 
-                            INNER JOIN tabDelegaciones 
-                            ON tabDelegados.idDelegacion = tabDelegaciones.idDelegacion""")
+            try:
+                sesion = request.json("idSesion")
+                cursor.execute("""SELECT * FROM tabDelegados 
+                INNER JOIN tabDelegaciones 
+                ON tabDelegados.idDelegacion = tabDelegaciones.idDelegacion
+                WHERE idSesion = %s""", (sesion,))
+
+            except:
+                cursor.execute("""SELECT * FROM tabDelegados 
+                                INNER JOIN tabDelegaciones 
+                                ON tabDelegados.idDelegacion = tabDelegaciones.idDelegacion""")
             delegados = cursor.fetchall()
             return delegados
         finally:

@@ -9,3 +9,6 @@ python-socketio[client]
 dotenv
 gevent
 gevent-websocket
+
+packaging
+pymysql

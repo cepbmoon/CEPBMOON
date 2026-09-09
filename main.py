@@ -129,7 +129,7 @@ class imgButton(QPushButton):
         self.bandera = QLabel(self)
         self.bandera.setPixmap(pixmap)
         self.bandera.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.bandera) # (stretch factor 0)
+        layout.addWidget(self.bandera)
 
         self.nomDelegacion = QLabel(text)
         self.nomDelegacion.setAlignment(Qt.AlignCenter | Qt.AlignBottom)
@@ -248,12 +248,13 @@ class CEPBMOON(QMainWindow):
 
     def Buscar(self):                # Para buscar un pais y que se añada a la lista de oradores
         delegacion = self.txtBuscador.text().strip()
-        if not delegacion or delegacion not in self.delegacionesEnElForo:       # Termina la función si no hay una delegacion en el buscador
+        if not delegacion or delegacion not in self.delegaciones:       # Termina la función si no hay una delegacion en el buscador
             return 
+        
         for i in range(self.scrollLayout.count()):                      # Termina la función si la delegación ya está en la fila
             item = self.scrollLayout.itemAt(i)
             widget = item.widget()
-            if isinstance(widget, QPushButton) and widget.text() == delegacion:
+            if isinstance(widget, QPushButton) and widget.nomDelegacion.text() == delegacion:
                 self.txtBuscador.clear()
                 return
             
@@ -381,7 +382,7 @@ class CEPBMOON(QMainWindow):
         self.btnHistorialObservaciones.clicked.connect(lambda: AbrirHistorial())
 
     def DelegacionesEnForo(self):          # Actualizar que delegaciones se cargarán, cargar la lista y checkboxes para seleccionar o no las delegaciones
-        delegacionesTot = self.delegacionesEnElForo
+        delegacionesTot = requests.get(self.SERVIDOR + "/GETdelegaciones").json()
         delegaciones = [{"nomDelegacion":d["nomDelegacion"], "idSesion": d["idSesion"]} for d in delegacionesTot]
         def DelegacionEnForo(state, delegacion): # Pone que una delegacion esté en el foro
             requests.post(self.SERVIDOR + "/POSTdelegados", json={"idSesion": self.idSesion if state else 0, "delegacion": delegacion})

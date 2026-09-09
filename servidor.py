@@ -93,19 +93,20 @@ class mainpy():
 
     @app.get("/GETdelegaciones")
     def getDelegaciones():
-        connexion_GETdelegaciones = pool.get_connection()
+        conexion = pool.get_connection()
         try:
-            cursor = connexion_GETdelegaciones.cursor()
-            try:
-                sesion = request.json["idSesion"]
-                cursor.execute("SELECT * FROM tabDelegaciones WHERE idSesion = %s", (sesion,))
-            except:
+            cursor = conexion.cursor()
+            data = request.get_json(silent=True) or {}
+            sesion = data.get("idSesion")
+            if sesion is None:
                 cursor.execute("SELECT * FROM tabDelegaciones")
+            else:
+                cursor.execute("SELECT * FROM tabDelegaciones WHERE idSesion = %s",(sesion,))
             delegaciones = cursor.fetchall()
             return jsonify(delegaciones)
         finally:
-            connexion_GETdelegaciones.close()
-
+            conexion.close()
+    
     @app.get("/GETidDelegacion")
     def getidDelegacion():
         cursor = conn.cursor()

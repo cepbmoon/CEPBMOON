@@ -102,7 +102,7 @@ class mainpy():
             except:
                 cursor.execute("SELECT * FROM tabDelegaciones")
             delegaciones = cursor.fetchall()
-            return delegaciones
+            return jsonify(delegaciones)
         finally:
             connexion_GETdelegaciones.close()
 

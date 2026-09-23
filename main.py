@@ -14,7 +14,7 @@ SERVIDOR = "https://cepbmoon.onrender.com"
 class ConectarForo(QDialog):
     def __init__(self):
         super().__init__()
-        self.SERVIDOR = SERVIDOR  #Va a ser el link a render!!
+        self.SERVIDOR = SERVIDOR
         loadUi("conectarMesa.ui", self)
         self.btnVolverCrear.clicked.connect(lambda: self.funcionquetemandadeunoaotro(self.wgtCrear))
         self.btnVolverIniciar.clicked.connect(lambda: self.funcionquetemandadeunoaotro(self.wgtIngresar))
@@ -22,7 +22,7 @@ class ConectarForo(QDialog):
         self.btnIniciarSesion.clicked.connect(self.IniciarSesion)
         self.btnCrearSesion.clicked.connect(self.CrearSesion)
 
-        self.idSesion=0
+        self.idSesion=0 # Prevencion de errores
 
     def funcionquetemandadeunoaotro(self, nombre):
         self.wgtCrear.setMaximumWidth(0)
@@ -59,7 +59,7 @@ class ConectarForo(QDialog):
         if self.idSesion:
             super().closeEvent(a0)
         else:
-            a0.ignore()
+            ventana.close()
     
 class NombrarMesa(QDialog):
     def __init__(self, msj, mesa, idSesion):
@@ -304,7 +304,7 @@ class CEPBMOON(QMainWindow):
             if self.time == QTime(0, 0, 0):
                 self.timer.stop()
                 if tiempo == "pensar":
-                    self.Cronometrar("contestar")
+                    self.sio.emit("conteoDelegacion",{"nomDelegacion": nomDelegacion, "tiempo": "contestar" ,"idSesion": self.idSesion})
                 else:
                     self.txtCronometro.setText(f"00:00")
                 return
@@ -336,6 +336,7 @@ class CEPBMOON(QMainWindow):
             self.listaHistorial.setItem(0, 1, QTableWidgetItem(str(delegacion["turnos"])))
 
     def Observaciones(self):         # Agenda las observaciones
+        self.delegado = ""
         delegadosTotal = requests.get(self.SERVIDOR + "/GETdelegados", json={"idSesion": self.idSesion}).json()
         def AbrirHistorial():                   # Abre el historial de observaciones
             self.verObservaciones = HistorialObservaciones(self.idSesion)
@@ -345,9 +346,14 @@ class CEPBMOON(QMainWindow):
             if self.delegado:
                 params = [idObs, self.txtObservacion.toPlainText(), self.numPuntaje.text(), self.delegado]
                 requests.post(self.SERVIDOR + "/POSTobservacion", json={"params": params, "idSesion": self.idSesion})
-                self.delegado=""
-                self.txtDelegacion.setText(self.txtObservacion.setText(""))
-                self.numPuntaje.setValue(0)
+            elif self.btnD1.text() or self.btnD2.text():
+                params = [idObs, self.txtObservacion.toPlainText(), self.numPuntaje.text(), [self.btnD1.text(), self.btnD2.text()]]
+                requests.post(self.SERVIDOR + "/POSTobservacion", json={"params": params, "idSesion": self.idSesion})
+
+            self.delegado=""
+            self.txtDelegacion.setText(self.txtObservacion.setText(""))
+            self.numPuntaje.setValue(0)
+
         def ElegirDelegado(delegacion):               # Selecciona bajo que delegado se guardará la observación
             colores = ["background-color: rgb(156, 152, 181);border-radius: 15px;font: 11pt 'Bahnschrift SemiLight';", "background-color: rgb(186, 182, 209);border-radius: 15px;font: 11pt 'Bahnschrift SemiLight'"]
             try:
@@ -396,6 +402,8 @@ class CEPBMOON(QMainWindow):
                 btn_delegacionEnForo.setChecked(id_sesion ==self.idSesion)
                 btn_delegacionEnForo.stateChanged.connect(lambda state, d=nombre: DelegacionEnForo(state, d))
                 btn_delegacionEnForo.setLayoutDirection(Qt.RightToLeft)
+                if id_sesion != self.idSesion and id_sesion:
+                    btn_delegacionEnForo.setEnabled(False)
 
                 row_position = self.listaForo.rowCount()
                 self.listaForo.insertRow(row_position)

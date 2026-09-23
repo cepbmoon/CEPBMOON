@@ -10,7 +10,7 @@ load_dotenv()
 
 config = {'port': int(os.getenv('DB_PORT', 3306)),
         'user': os.getenv('DB_USER'),
-        'password': os.getenv('DB_PASSWORD'),  # Your password is now safe
+        'password': os.getenv('DB_PASSWORD'),
         'host': os.getenv('DB_HOST'),
         'database': os.getenv('DB_NAME'),
          "cursorclass":pymysql.cursors.DictCursor
@@ -106,10 +106,10 @@ class mainpy():
             return jsonify(delegaciones)
         finally:
             conexion.close()
-    
+
     @app.get("/GETidDelegacion")
     def getidDelegacion():
-        cursor = conn.cursor()
+        cursor = conn.cursor()  
         delegacion = request.json["delegacion"]
         cursor.execute("SELECT idDelegacion FROM tabDelegaciones WHERE nomDelegacion = %s", (delegacion))
         idDelegacion = cursor.fetchall()
@@ -305,11 +305,19 @@ class mainpy():
             cursor = conexion_POSTobservacion.cursor()
             sesion = request.json["idSesion"]
             params = request.json["params"]
+            delegado = params[3]
             sesion = request.json["idSesion"]
-            cursor.execute("""INSERT INTO tabPuntaje (idDelegado, idSesion, idObs, descObs, puntaje)
-                                SELECT idDelegado, %s, %s, %s, %s
-                                FROM tabDelegados
-                                WHERE tabDelegados.nomDelegado = %s""", (sesion, params[0], params[1], params[2], params[3]))
+            if isinstance(delegado, str):
+                cursor.execute("""INSERT INTO tabPuntaje (idDelegado, idSesion, idObs, descObs, puntaje)
+                                    SELECT idDelegado, %s, %s, %s, %s
+                                    FROM tabDelegados
+                                    WHERE tabDelegados.nomDelegado = %s""", (sesion, params[0], params[1], params[2], delegado))
+            else:
+                for dele in delegado:
+                    cursor.execute("""INSERT INTO tabPuntaje (idDelegado, idSesion, idObs, descObs, puntaje)
+                                        SELECT idDelegado, %s, %s, %s, %s
+                                        FROM tabDelegados
+                                        WHERE tabDelegados.nomDelegado = %s""", (sesion, params[0], params[1], params[2], dele))
             conexion_POSTobservacion.commit()
             return {"ok": True}
         finally:

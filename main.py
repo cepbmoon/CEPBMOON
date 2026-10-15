@@ -5,17 +5,26 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import requests
 import sys
+import os
 import socketio
 from PyQt5.QtCore import pyqtSignal
 
 SERVIDOR = "https://cepbmoon.onrender.com"
 # SERVIDOR = "http://127.0.0.1:5000"
 
+def resource_path(relative_path):
+    if getattr(sys, "frozen", False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__)) 
+        
+    return os.path.join(base_path, relative_path)
+
 class ConectarForo(QDialog):
     def __init__(self):
         super().__init__()
         self.SERVIDOR = SERVIDOR
-        loadUi("conectarMesa.ui", self)
+        loadUi(resource_path("conectarMesa.ui"), self)
         self.btnVolverCrear.clicked.connect(lambda: self.funcionquetemandadeunoaotro(self.wgtCrear))
         self.btnVolverIniciar.clicked.connect(lambda: self.funcionquetemandadeunoaotro(self.wgtIngresar))
 
@@ -65,7 +74,7 @@ class NombrarMesa(QDialog):
     def __init__(self, msj, mesa, idSesion):
         super().__init__()
         self.SERVIDOR = SERVIDOR
-        loadUi("dialog.ui", self)
+        loadUi(resource_path("dialog.ui"), self)
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
         self.mesa = mesa
         self.idSesion = idSesion
@@ -101,7 +110,7 @@ class HistorialObservaciones(QMainWindow):
     def __init__(self, idSesion):
         super().__init__()
         self.SERVIDOR = SERVIDOR  #Va a ser el link a render!!
-        loadUi("historialObs.ui", self)
+        loadUi(resource_path("historialObs.ui"), self)
 
         self.idSesion = idSesion
         self.tabHistorial.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -119,23 +128,20 @@ class HistorialObservaciones(QMainWindow):
         except:
             pass
 
-class imgButton(QPushButton):
-    def __init__(self, img, text, parent):
-        super(imgButton, self).__init__(parent)
-        layout = QVBoxLayout(self)
-
-        icon = QIcon(img)
-        pixmap = icon.pixmap(75, 150, QIcon.Active, QIcon.On)
-        self.bandera = QLabel(self)
-        self.bandera.setPixmap(pixmap)
-        self.bandera.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.bandera)
-
-        self.nomDelegacion = QLabel(text)
-        self.nomDelegacion.setAlignment(Qt.AlignCenter | Qt.AlignBottom)
-        self.nomDelegacion.setWordWrap(True)
+class imgButton(QPushButton): 
+    def __init__(self, img, text, parent=None): 
+        super().__init__(parent) 
+        layout = QVBoxLayout(self) 
+        icon = QIcon(img) 
+        pixmap = icon.pixmap(75, 150, QIcon.Active, QIcon.On) 
+        self.bandera = QLabel(self) 
+        self.bandera.setPixmap(pixmap) 
+        self.bandera.setAlignment(Qt.AlignCenter) 
+        layout.addWidget(self.bandera) 
+        self.nomDelegacion = QLabel(text) 
+        self.nomDelegacion.setAlignment(Qt.AlignCenter | Qt.AlignBottom) 
+        self.nomDelegacion.setWordWrap(True) 
         layout.addWidget(self.nomDelegacion)
-        self.show()
 
 class CEPBMOON(QMainWindow):
     cambiosRecibidos = pyqtSignal(dict)
@@ -145,7 +151,7 @@ class CEPBMOON(QMainWindow):
         self.sio = socketio.Client()
         self.cambiosRecibidos.connect(self.ProcesarCambios)
 
-        loadUi("main.ui", self)
+        loadUi(resource_path("main.ui"), self)
         self.setEnabled(False)
         self.idSesion = 0
 
@@ -165,8 +171,33 @@ class CEPBMOON(QMainWindow):
         self.btn4.clicked.connect(lambda _, c=self.Historial: self.Expandir(c))
 
         #Ajusta el layout de la fila de delegaciones
-        self.scrollLayout = QHBoxLayout(self.scrollAreaWidgetContents)
-        self.scrollAreaWidgetContents.setLayout(self.scrollLayout)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.scrollGrid = QGridLayout(self.scrollAreaWidgetContents)
+        self.scrollGrid.setContentsMargins(0, 0, 0, 0)
+        self.scrollGrid.setSpacing(0)
+
+        self.lblImagen = QLabel()
+        self.lblImagen.setAlignment(Qt.AlignCenter)
+        self.lblImagen.setPixmap(QPixmap("Recursos/logoCuadradoGris.png"))
+        self.lblImagen.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.lblImagen.setScaledContents(True)
+
+        self.lblImagen.setMaximumSize(421, 421)
+        self.scrollGrid.addWidget(self.lblImagen, 0, 0, Qt.AlignCenter)
+
+        self.botonesWidget = QWidget()
+        self.botonesWidget.setAttribute(Qt.WA_TranslucentBackground)
+        self.botonesWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.scrollGrid.addWidget(self.botonesWidget, 0, 0)
+
+        self.scrollLayout = QHBoxLayout(self.botonesWidget)
+        self.scrollLayout.setContentsMargins(20, 20, 20, 20)
+        self.scrollLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
         self.timer = QTimer()
   
         self.cerrarSideBar.clicked.connect(lambda: self.sideBar.setMaximumWidth(0))
@@ -236,8 +267,8 @@ class CEPBMOON(QMainWindow):
         self.txtBuscador.setCompleter(self.completer)
         self.txtDelegacion.setCompleter(self.completer)
 
-        self.txtBuscador.returnPressed.connect(self.Buscar)
-        self.btnBuscar.clicked.connect(self.Buscar)
+        self.txtBuscador.returnPressed.connect(lambda: self.Buscar(self.txtBuscador.text().strip()))
+        self.btnBuscar.clicked.connect(lambda: self.Buscar(self.txtBuscador.text().strip()))
 
     def NombrarMesaAlAbrir(self):    # Abre el menú para nombrar a los miembros de la mesa, primero comprueba que esté completa paa abrirlo
         mesa = requests.get(self.SERVIDOR + "/GETmesa", json={"idSesion": self.idSesion}).json()
@@ -246,8 +277,8 @@ class CEPBMOON(QMainWindow):
             self.nombrarMesa.setModal(True) 
             self.nombrarMesa.show()
 
-    def Buscar(self):                # Para buscar un pais y que se añada a la lista de oradores
-        delegacion = self.txtBuscador.text().strip()
+    def Buscar(self, delegacion):                # Para buscar un pais y que se añada a la lista de oradores
+        self.txtBuscador.clear()
         if not delegacion or delegacion not in self.delegaciones:       # Termina la función si no hay una delegacion en el buscador
             return 
         
@@ -263,11 +294,13 @@ class CEPBMOON(QMainWindow):
         self.txtBuscador.clear()
 
     def CrearFila(self, fila):             # Actualiza la fila de delegaciones en cola
+        self.txtBuscador.clear()
         if not fila:
             fila = requests.get(self.SERVIDOR + "/GETfila_delegaciones", json={"idSesion": self.idSesion}).json()
         self.LimpiarLayout(self.scrollLayout)
         for delegacion in fila:
-            btn = imgButton(f"CEPBMOON PAISES Y DEPARTAMENTOS/{delegacion["nomDelegacion"]}.png", delegacion["nomDelegacion"], self)
+            # Corrección: comillas simples para la clave del diccionario
+            btn = imgButton((f"Recursos/{delegacion['nomDelegacion']}.png"),delegacion["nomDelegacion"],self)
             btn.setMinimumSize(100, 100)
             btn.setMaximumSize(100, 100)
             btn.setStyleSheet('font: 10pt "Bahnschrift SemiBold"; text-align: left; background-color: rgb(255, 255, 255); border-radius: 20px;')
@@ -326,7 +359,7 @@ class CEPBMOON(QMainWindow):
         self.timer.timeout.connect(lambda: Cronometro(nomDelegacion))
         self.timer.start(1000)
 
-    def CrearHistorial(self, historial):        # 
+    def CrearHistorial(self, historial):        #   
         if not historial:
             historial = requests.get(self.SERVIDOR + "/GEThistorial", json={"idSesion": self.idSesion}).json()
         self.listaHistorial.clearContents()
@@ -402,8 +435,8 @@ class CEPBMOON(QMainWindow):
                 btn_delegacionEnForo.setChecked(id_sesion ==self.idSesion)
                 btn_delegacionEnForo.stateChanged.connect(lambda state, d=nombre: DelegacionEnForo(state, d))
                 btn_delegacionEnForo.setLayoutDirection(Qt.RightToLeft)
-                if id_sesion != self.idSesion and id_sesion:
-                    btn_delegacionEnForo.setEnabled(False)
+                # if id_sesion != self.idSesion and id_sesion:
+                #     btn_delegacionEnForo.setEnabled(False)
 
                 row_position = self.listaForo.rowCount()
                 self.listaForo.insertRow(row_position)
